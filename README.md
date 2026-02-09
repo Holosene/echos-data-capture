@@ -136,8 +136,8 @@ The repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml
 
 ### Setup
 
-1. Go to your repository Settings → Pages
-2. Set Source to "GitHub Actions"
+1. Go to your repository **Settings → Pages**
+2. Under "Build and deployment", set **Source** to **"GitHub Actions"** (not "Deploy from a branch")
 3. Push to `main` branch — deployment happens automatically
 
 ### Base Path
@@ -145,6 +145,20 @@ The repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml
 The Vite config sets `base: '/echos-donees-capturees/'` to match the repository name. If you fork/rename the repo, update this in `apps/web/vite.config.ts`.
 
 The app uses `HashRouter` to avoid 404 issues on GitHub Pages (URLs like `/#/scan` instead of `/scan`).
+
+### Deployment Verification
+
+After deployment, visit `https://<user>.github.io/echos-donees-capturees/`. You should see:
+
+- The **ECHOS** title with a gradient effect
+- A **"Start New Scan"** button
+- A dark glassmorphism UI (background `#1A1A1A`)
+- The wizard flow accessible at `/#/scan`
+
+**If you see the README content rendered as a documentation page instead**, it means:
+- GitHub Pages is set to "Deploy from a branch" instead of "GitHub Actions" — change it in Settings → Pages
+- OR the GitHub Actions workflow failed — check the Actions tab for build errors
+- The deployed artifact must be the Vite build output (`apps/web/dist/`), not the repo root
 
 ---
 
