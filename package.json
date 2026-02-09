@@ -1,0 +1,31 @@
+{
+  "name": "echos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ECHOS — Perceptive archive from sonar screen captures and GPS traces",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build:core && npm run build:ui && npm run build:web",
+    "build:core": "npm run build --workspace=packages/core",
+    "build:ui": "npm run build --workspace=packages/ui",
+    "build:web": "npm run build --workspace=apps/web",
+    "preview": "npm run preview --workspace=apps/web",
+    "test": "npm run test --workspace=packages/core",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
