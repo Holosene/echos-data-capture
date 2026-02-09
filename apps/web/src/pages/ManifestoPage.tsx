@@ -1,101 +1,85 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GlassPanel, Button, colors, fonts } from '@echos/ui';
+import { useTranslation } from '../i18n/index.js';
 
 export function ManifestoPage() {
   const navigate = useNavigate();
+  const { t, tArray } = useTranslation();
 
   return (
-    <div style={{ background: colors.black, padding: '48px 24px 80px' }}>
-      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+    <div style={{ background: colors.black, padding: 'clamp(40px, 5vw, 80px) clamp(20px, 5vw, 48px)' }}>
+      <div style={{ maxWidth: '840px', margin: '0 auto' }}>
         <h1
           style={{
             fontFamily: fonts.display,
             fontVariationSettings: "'wght' 500",
-            fontSize: '42px',
-            lineHeight: 0.85,
+            fontSize: 'clamp(36px, 4vw, 56px)',
+            lineHeight: 1,
             letterSpacing: '-0.02em',
             color: colors.text1,
-            marginBottom: '12px',
+            marginBottom: '16px',
           }}
         >
-          Manifesto
+          {t('manifesto.title')}
         </h1>
         <p
           style={{
             fontFamily: fonts.display,
             fontVariationSettings: "'wght' 400",
-            fontSize: '20px',
-            lineHeight: 0.92,
+            fontSize: 'clamp(18px, 2vw, 24px)',
+            lineHeight: 1.2,
             color: colors.accent,
-            marginBottom: '48px',
+            marginBottom: '56px',
           }}
         >
-          On the captured echo and the perceptive archive
+          {t('manifesto.subtitle')}
         </p>
 
-        <div style={{ display: 'grid', gap: '24px' }}>
-          <GlassPanel>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px', color: colors.text1 }}>
-              The confined measurement
+        <div style={{ display: 'grid', gap: '28px' }}>
+          <GlassPanel padding="32px">
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.text1 }}>
+              {t('manifesto.s1.title')}
             </h2>
-            <p style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px' }}>
-              Consumer sonar devices — fishfinders, depth sounders — produce a real acoustic
-              measurement. Sound travels through water, bounces off the bottom, off vegetation,
-              off suspended matter. The device captures this echo and turns it into an image.
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px' }}>
+              {t('manifesto.s1.p1')}
             </p>
-            <p style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px', marginTop: '12px' }}>
-              But this measurement is confined. The raw data — the acoustic samples, the return
-              signal envelopes — are locked inside proprietary systems. You cannot export them.
-              The screen becomes the only sanctioned output.
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px', marginTop: '14px' }}>
+              {t('manifesto.s1.p2')}
             </p>
           </GlassPanel>
 
-          <GlassPanel>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px', color: colors.text1 }}>
-              The screen as primary source
+          <GlassPanel padding="32px">
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.text1 }}>
+              {t('manifesto.s2.title')}
             </h2>
-            <p style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px' }}>
-              When the raw data is unreachable, the screen image becomes the primary source.
-              Not a perfect source — it carries the biases of rendering algorithms, color maps,
-              gain settings, screen resolution. But it is a faithful trace of what the instrument
-              "decided to show."
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px' }}>
+              {t('manifesto.s2.p1')}
             </p>
-            <p style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px', marginTop: '12px' }}>
-              ECHOS takes this position seriously: the screen recording is not a degraded copy
-              of something better. It is the most accessible, most shareable, most reproducible
-              form of the sonar observation.
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px', marginTop: '14px' }}>
+              {t('manifesto.s2.p2')}
             </p>
           </GlassPanel>
 
-          <GlassPanel>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px', color: colors.text1 }}>
-              The perceptive archive
+          <GlassPanel padding="32px">
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.text1 }}>
+              {t('manifesto.s3.title')}
             </h2>
-            <p style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px' }}>
-              By combining a screen capture (MP4) with a simultaneous GPS trace (GPX), ECHOS
-              builds a spatial volume — a three-dimensional reconstruction of what the sonar
-              showed, placed in geographic context. This is not a bathymetric survey. It claims
-              perceptive coherence.
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px' }}>
+              {t('manifesto.s3.p1')}
             </p>
-            <p style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px', marginTop: '12px' }}>
-              The result is a volume you can slice, rotate, explore. A readable archive of an
-              underwater observation session. An "echo of echoes" — captured, structured, opened.
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px', marginTop: '14px' }}>
+              {t('manifesto.s3.p2')}
             </p>
           </GlassPanel>
 
-          <GlassPanel>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px', color: colors.text1 }}>
-              What ECHOS is not
+          <GlassPanel padding="32px">
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.text1 }}>
+              {t('manifesto.s4.title')}
             </h2>
-            <ul style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px', listStyle: 'none', padding: 0, display: 'grid', gap: '6px' }}>
-              {[
-                'Not a bathymetric tool — it does not produce metrically calibrated depth maps.',
-                'Not a scientific instrument — the source data is a screen image, not raw acoustic samples.',
-                'Not a replacement for professional survey software.',
-                'Not dependent on any sonar brand or protocol.',
-              ].map((item, i) => (
-                <li key={i} style={{ display: 'flex', gap: '10px' }}>
+            <ul style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px', listStyle: 'none', padding: 0, display: 'grid', gap: '8px' }}>
+              {tArray('manifesto.s4.items').map((item, i) => (
+                <li key={i} style={{ display: 'flex', gap: '12px' }}>
                   <span style={{ color: colors.text3, flexShrink: 0 }}>--</span>
                   {item}
                 </li>
@@ -103,19 +87,13 @@ export function ManifestoPage() {
             </ul>
           </GlassPanel>
 
-          <GlassPanel>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px', color: colors.text1 }}>
-              What ECHOS is
+          <GlassPanel padding="32px">
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', color: colors.text1 }}>
+              {t('manifesto.s5.title')}
             </h2>
-            <ul style={{ color: colors.text2, lineHeight: '1.7', fontSize: '14px', listStyle: 'none', padding: 0, display: 'grid', gap: '6px' }}>
-              {[
-                'A tool for building readable, shareable, explorable volumes from consumer sonar screens.',
-                'An assertion that the screen capture is a valid primary source.',
-                'An accessible bridge between consumer devices and scientific visualization.',
-                'An open archive format for underwater perceptive data.',
-                'A starting point — not an endpoint.',
-              ].map((item, i) => (
-                <li key={i} style={{ display: 'flex', gap: '10px' }}>
+            <ul style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px', listStyle: 'none', padding: 0, display: 'grid', gap: '8px' }}>
+              {tArray('manifesto.s5.items').map((item, i) => (
+                <li key={i} style={{ display: 'flex', gap: '12px' }}>
                   <span style={{ color: colors.accent, flexShrink: 0 }}>+</span>
                   {item}
                 </li>
@@ -124,9 +102,9 @@ export function ManifestoPage() {
           </GlassPanel>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '48px' }}>
-          <Button variant="primary" onClick={() => navigate('/scan')}>
-            Start Using ECHOS
+        <div style={{ textAlign: 'center', marginTop: '56px' }}>
+          <Button variant="primary" size="lg" onClick={() => navigate('/scan')}>
+            {t('manifesto.cta')}
           </Button>
         </div>
       </div>
