@@ -29,9 +29,9 @@ jobs:
         with:
           node-version: '20'
 
-      # Single root install — sets up workspace symlinks for @echos/core and @echos/ui.
-      # DO NOT run a second npm install inside apps/web — that breaks workspace resolution
-      # and causes Vite to produce a near-empty bundle (the 58 KB bug).
+      # Single root install — sets up workspace symlinks for @echos/core, @echos/ui,
+      # and hoists all devDependencies (vite, etc.) into root node_modules.
+      # DO NOT add a second npm install inside apps/web — it breaks workspace links.
       - name: Install dependencies
         run: npm install
 
@@ -45,9 +45,13 @@ jobs:
           node -e "require.resolve('vite')" && echo "OK: vite resolves" || { echo "FAIL: vite not found"; exit 1; }
           echo "All workspace dependencies verified."
 
+      # Use --workspace flag from root — this is the most reliable way to run
+      # a build in an npm workspace. It correctly sets up PATH, resolves all
+      # workspace symlinks, and finds the hoisted vite binary.
+      # DO NOT use "npx vite build" — npx may download a separate vite copy
+      # that lacks project context, producing an empty 58 KB bundle.
       - name: Build web app
-        working-directory: apps/web
-        run: npm run build
+        run: npm run build --workspace=apps/web
 
       - name: Add .nojekyll
         run: touch apps/web/dist/.nojekyll
