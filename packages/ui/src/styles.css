@@ -42,10 +42,10 @@
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
 
-  /* Layout gutter system — topbar full-width, content aligned to logo right edge */
+  /* Layout gutter system — topbar full-width, content max-width constrained */
   --page-gutter: clamp(16px, 3vw, 40px);
-  --logo-block-w: 140px;
-  --content-gutter: calc(var(--page-gutter) + var(--logo-block-w));
+  --content-gutter: clamp(20px, 4vw, 48px);
+  --content-max-width: 1400px;
 
   /* Topbar gradient — subtle Adobe Fonts-inspired */
   --topbar-bg:

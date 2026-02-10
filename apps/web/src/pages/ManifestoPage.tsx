@@ -8,8 +8,8 @@ export function ManifestoPage() {
   const { t, tArray } = useTranslation();
 
   return (
-    <div style={{ background: colors.black, padding: 'clamp(40px, 5vw, 80px) var(--content-gutter)' }}>
-      <div>
+    <div style={{ background: colors.black }}>
+      <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', padding: 'clamp(40px, 5vw, 80px) var(--content-gutter)' }}>
         {/* Header - full width */}
         <h1
           style={{

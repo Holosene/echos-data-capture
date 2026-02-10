@@ -58,6 +58,8 @@ export function HomePage() {
       {/* Hero */}
       <section
         style={{
+          maxWidth: 'var(--content-max-width)',
+          margin: '0 auto',
           padding: 'clamp(48px, 8vw, 100px) var(--content-gutter) clamp(32px, 4vw, 64px)',
         }}
       >
@@ -92,7 +94,7 @@ export function HomePage() {
       </section>
 
       {/* Hero visual zone */}
-      <section style={{ padding: `0 var(--content-gutter) clamp(48px, 5vw, 80px)` }}>
+      <section style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', padding: `0 var(--content-gutter) clamp(48px, 5vw, 80px)` }}>
         <div
           className="hero-visual-grid"
           style={{
@@ -133,7 +135,7 @@ export function HomePage() {
       </section>
 
       {/* Stats */}
-      <section style={{ padding: `0 var(--content-gutter) clamp(40px, 4vw, 64px)` }}>
+      <section style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', padding: `0 var(--content-gutter) clamp(40px, 4vw, 64px)` }}>
         <div
           className="stats-row"
           style={{
@@ -164,7 +166,7 @@ export function HomePage() {
       </section>
 
       {/* How it works */}
-      <section style={{ padding: `clamp(40px, 4vw, 64px) var(--content-gutter)` }}>
+      <section style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', padding: `clamp(40px, 4vw, 64px) var(--content-gutter)` }}>
         <h2
           style={{
             fontFamily: fonts.display,
@@ -206,7 +208,7 @@ export function HomePage() {
       </section>
 
       {/* Gallery — flex rows with hover zoom on desktop, horizontal scroll on mobile */}
-      <section style={{ padding: `0 var(--content-gutter) clamp(48px, 6vw, 100px)` }}>
+      <section style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', padding: `0 var(--content-gutter) clamp(48px, 6vw, 100px)` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '24px' }}>
           <div>
             <h2
@@ -296,6 +298,8 @@ export function HomePage() {
       <section
         id="docs-section"
         style={{
+          maxWidth: 'var(--content-max-width)',
+          margin: '0 auto',
           padding: `clamp(48px, 5vw, 80px) var(--content-gutter) clamp(64px, 6vw, 120px)`,
         }}
       >
