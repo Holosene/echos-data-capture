@@ -88,7 +88,9 @@ function Topbar() {
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          padding: 0,
+          padding: '0 16px 0 0',
+          margin: 0,
+          height: '100%',
           flexShrink: 0,
         }}
       >
