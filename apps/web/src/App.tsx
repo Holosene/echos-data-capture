@@ -72,6 +72,7 @@ function Topbar() {
 
   return (
     <header className="echos-topbar">
+      <div className="topbar-inner">
       {/* Logo */}
       <button
         onClick={() => navigate('/')}
@@ -204,6 +205,7 @@ function Topbar() {
           {t('nav.newScan')}
         </button>
       )}
+      </div>
     </header>
   );
 }

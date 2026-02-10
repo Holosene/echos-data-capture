@@ -9,9 +9,9 @@ export function DocsPage() {
   const { t } = useTranslation();
 
   return (
-    <div style={{ background: colors.black, padding: 'clamp(40px, 5vw, 80px) clamp(16px, 2.5vw, 24px)' }}>
+    <div style={{ background: colors.black, padding: 'clamp(40px, 5vw, 80px) var(--layout-padding)' }}>
       <DocsSection />
-      <div style={{ textAlign: 'center', maxWidth: '1400px', margin: '56px auto 0' }}>
+      <div style={{ textAlign: 'center', maxWidth: 'var(--layout-max-width)', margin: '56px auto 0' }}>
         <Button variant="primary" size="lg" onClick={() => navigate('/scan')}>
           {t('docs.cta')}
         </Button>
