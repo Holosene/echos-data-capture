@@ -24,7 +24,7 @@ function Topbar() {
 
   const logoSrc = theme === 'dark'
     ? `${import.meta.env.BASE_URL}logotype-02.svg`
-    : `${import.meta.env.BASE_URL}logotype-02-white.svg`;
+    : `${import.meta.env.BASE_URL}logotype-02-white.png`;
 
   return (
     <header
@@ -43,7 +43,7 @@ function Topbar() {
         transition: 'background 200ms ease',
       }}
     >
-      {/* Logo - logotype-02.svg (dark) / logotype-02-white.svg (light) */}
+      {/* Logo - logotype-02.svg (dark) / logotype-02-white.png (light) */}
       <button
         onClick={() => navigate('/')}
         style={{
