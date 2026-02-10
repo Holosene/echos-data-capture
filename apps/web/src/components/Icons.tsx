@@ -211,6 +211,14 @@ export function IconChevronRight({ size = 24, color = 'currentColor', style }: I
   );
 }
 
+export function IconChevronUp({ size = 24, color = 'currentColor', style }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  );
+}
+
 export function IconZoomIn({ size = 24, color = 'currentColor', style }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>

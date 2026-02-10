@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, GlassPanel, colors, fonts } from '@echos/ui';
 import { useTranslation } from '../i18n/index.js';
 import { useTheme } from '../theme/index.js';
-import { IconImage } from '../components/Icons.js';
+import { IconImage, IconChevronUp } from '../components/Icons.js';
 import { ImageLightbox } from '../components/ImageLightbox.js';
 import { DocsSection } from '../components/DocsSection.js';
 
@@ -301,6 +301,36 @@ export function HomePage() {
       >
         <DocsSection />
       </section>
+
+      {/* Scroll to top */}
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 clamp(32px, 4vw, 56px)' }}>
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            border: `1px solid ${colors.border}`,
+            background: colors.surface,
+            color: colors.text2,
+            cursor: 'pointer',
+            transition: 'border-color 200ms ease, color 200ms ease',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = 'var(--c-border-hover)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--c-text-1)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = 'var(--c-border)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--c-text-2)';
+          }}
+        >
+          <IconChevronUp size={20} />
+        </button>
+      </div>
 
       {/* Lightbox */}
       {lightboxOpen && (
