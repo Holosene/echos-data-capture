@@ -20,6 +20,7 @@
   --c-success: #34D399;
   --c-warning: #FBBF24;
   --c-error: #F87171;
+  --c-on-accent: #FFFFFF;
 
   --color-primary: #4221CE;
   --color-black: #111111;
@@ -60,7 +61,7 @@
   --c-border-active: rgba(0, 0, 0, 0.25);
   --c-text-1: #111111;
   --c-text-2: rgba(17, 17, 17, 0.6);
-  --c-text-3: rgba(17, 17, 17, 0.35);
+  --c-text-3: rgba(17, 17, 17, 0.5);
   --color-black: #FAFAFA;
   --color-white: #111111;
   --color-surface: #FFFFFF;

@@ -25,6 +25,9 @@ export const colors = {
   text2: 'var(--c-text-2)',
   text3: 'var(--c-text-3)',
 
+  // Fixed — always white, for text on accent buttons
+  onAccent: 'var(--c-on-accent)',
+
   // Functional
   success: 'var(--c-success)',
   warning: 'var(--c-warning)',

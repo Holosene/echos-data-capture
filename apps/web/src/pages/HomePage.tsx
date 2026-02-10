@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, GlassPanel, colors, fonts } from '@echos/ui';
 import { useTranslation } from '../i18n/index.js';
+import { useTheme } from '../theme/index.js';
 import { IconImage, IconArrowRight } from '../components/Icons.js';
 import { ImageLightbox } from '../components/ImageLightbox.js';
 
 export function HomePage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
@@ -58,7 +60,7 @@ export function HomePage() {
         {/* Logotype PNG - left-aligned */}
         <div style={{ marginBottom: '32px' }}>
           <img
-            src={`${import.meta.env.BASE_URL}logotype.png`}
+            src={`${import.meta.env.BASE_URL}${theme === 'dark' ? 'logotype.png' : 'logotype_dark.png'}`}
             alt="echos - donnees capturees"
             style={{
               width: 'clamp(280px, 35vw, 480px)',

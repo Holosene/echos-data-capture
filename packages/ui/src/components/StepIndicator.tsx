@@ -65,7 +65,7 @@ export function StepIndicator({ steps, currentStep, onStepClick }: StepIndicator
                   ...(isCompleted
                     ? {
                         background: colors.accent,
-                        color: colors.white,
+                        color: colors.onAccent,
                         border: `2px solid ${colors.accent}`,
                       }
                     : isActive
