@@ -32,18 +32,17 @@ export function HomePage() {
           padding: 'clamp(48px, 8vw, 100px) clamp(20px, 5vw, 48px) clamp(32px, 4vw, 64px)',
         }}
       >
-        {/* Logotype PNG — left-aligned, full width */}
+        {/* Logotype SVG — left-aligned, full width */}
         <div style={{ marginBottom: '32px' }}>
           <img
-            src="/echos-donees-capturees/logotype.png"
-            alt="Échos — données capturées"
+            src="/echos-donees-capturees/logotype.svg"
+            alt="échos — données capturées"
             style={{
               height: 'clamp(48px, 7vw, 80px)',
               width: 'auto',
               display: 'block',
             }}
             onError={(e) => {
-              // Fallback to text if PNG not yet deposited
               const el = e.target as HTMLImageElement;
               el.style.display = 'none';
               const fallback = el.nextElementSibling as HTMLElement;
@@ -61,14 +60,14 @@ export function HomePage() {
               color: colors.accent,
             }}
           >
-            Échos
+            échos
           </h1>
         </div>
 
         <p
           style={{
             fontFamily: fonts.display,
-            fontVariationSettings: "'wght' 400",
+            fontVariationSettings: "'wght' 500",
             fontSize: 'clamp(24px, 3.5vw, 40px)',
             lineHeight: 1.1,
             letterSpacing: '-0.01em',
@@ -182,7 +181,7 @@ export function HomePage() {
         <h2
           style={{
             fontFamily: fonts.display,
-            fontVariationSettings: "'wght' 500",
+            fontVariationSettings: "'wght' 600",
             fontSize: 'clamp(28px, 3vw, 36px)',
             lineHeight: 1.1,
             letterSpacing: '-0.02em',
@@ -233,7 +232,7 @@ export function HomePage() {
             <h2
               style={{
                 fontFamily: fonts.display,
-                fontVariationSettings: "'wght' 500",
+                fontVariationSettings: "'wght' 600",
                 fontSize: 'clamp(28px, 3vw, 36px)',
                 lineHeight: 1.1,
                 letterSpacing: '-0.02em',
@@ -256,7 +255,6 @@ export function HomePage() {
             gap: '16px',
           }}
         >
-          {/* Placeholder slots — these get replaced by real images when deposited */}
           {[
             { file: 'gallery-01.png', span: '2' },
             { file: 'gallery-03.png', span: '1' },
@@ -309,7 +307,7 @@ export function HomePage() {
           <h2
             style={{
               fontFamily: fonts.display,
-              fontVariationSettings: "'wght' 500",
+              fontVariationSettings: "'wght' 600",
               fontSize: 'clamp(24px, 3vw, 36px)',
               lineHeight: 1.1,
               color: colors.text1,

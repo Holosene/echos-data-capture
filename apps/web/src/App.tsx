@@ -30,13 +30,13 @@ function Topbar() {
         display: 'flex',
         alignItems: 'center',
         padding: '0 clamp(16px, 4vw, 40px)',
-        background: 'rgba(17, 17, 17, 0.88)',
+        background: 'rgba(250, 250, 250, 0.92)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         borderBottom: `1px solid ${colors.border}`,
       }}
     >
-      {/* Logo */}
+      {/* Logo — logotype-02.svg replaces icon + text */}
       <button
         onClick={() => navigate('/')}
         style={{
@@ -45,19 +45,24 @@ function Topbar() {
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
           padding: 0,
           flexShrink: 0,
         }}
       >
         <img
-          src="/echos-donees-capturees/logo-mark.png"
-          alt=""
-          style={{ height: '32px', width: 'auto' }}
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          src="/echos-donees-capturees/logotype-02.svg"
+          alt="échos"
+          style={{ height: '28px', width: 'auto' }}
+          onError={(e) => {
+            const el = e.target as HTMLImageElement;
+            el.style.display = 'none';
+            const fallback = el.nextElementSibling as HTMLElement;
+            if (fallback) fallback.style.display = 'block';
+          }}
         />
         <span
           style={{
+            display: 'none',
             fontFamily: fonts.display,
             fontVariationSettings: "'wght' 500",
             fontSize: '24px',
@@ -66,7 +71,7 @@ function Topbar() {
             letterSpacing: '-0.02em',
           }}
         >
-          Échos
+          échos
         </span>
       </button>
 
@@ -154,7 +159,7 @@ function Topbar() {
             borderRadius: '9999px',
             border: 'none',
             background: colors.accent,
-            color: colors.white,
+            color: '#FFFFFF',
             fontSize: '14px',
             fontWeight: 500,
             cursor: 'pointer',
