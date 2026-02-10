@@ -35,7 +35,7 @@ export function HomePage() {
         {/* Logotype PNG — left-aligned, full width */}
         <div style={{ marginBottom: '32px' }}>
           <img
-            src="/echos-donees-capturees/brand/logotype.png"
+            src="/echos-donees-capturees/logotype.png"
             alt="Échos — données capturées"
             style={{
               height: 'clamp(48px, 7vw, 80px)',
@@ -122,7 +122,7 @@ export function HomePage() {
           {/* Main hero visual */}
           <div className="visual-placeholder" style={{ minHeight: '240px' }}>
             <img
-              src="/echos-donees-capturees/brand/hero-main.png"
+              src="/echos-donees-capturees/hero-main.png"
               alt=""
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
@@ -134,7 +134,7 @@ export function HomePage() {
           {/* Side visual */}
           <div className="visual-placeholder" style={{ minHeight: '240px' }}>
             <img
-              src="/echos-donees-capturees/brand/hero-side.png"
+              src="/echos-donees-capturees/hero-side.png"
               alt=""
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
@@ -259,10 +259,10 @@ export function HomePage() {
           {/* Placeholder slots — these get replaced by real images when deposited */}
           {[
             { file: 'gallery-01.png', span: '2' },
-            { file: 'gallery-02.png', span: '1' },
             { file: 'gallery-03.png', span: '1' },
             { file: 'gallery-04.png', span: '1' },
             { file: 'gallery-05.png', span: '1' },
+            { file: 'gallery-06.png', span: '1' },
           ].map((item) => (
             <div
               key={item.file}
@@ -273,7 +273,7 @@ export function HomePage() {
               }}
             >
               <img
-                src={`/echos-donees-capturees/brand/${item.file}`}
+                src={`/echos-donees-capturees/${item.file}`}
                 alt=""
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />

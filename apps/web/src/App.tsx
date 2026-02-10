@@ -51,7 +51,7 @@ function Topbar() {
         }}
       >
         <img
-          src="/echos-donees-capturees/brand/logo-mark.png"
+          src="/echos-donees-capturees/logo-mark.png"
           alt=""
           style={{ height: '32px', width: 'auto' }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
