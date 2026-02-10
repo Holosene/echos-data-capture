@@ -22,9 +22,9 @@ function Topbar() {
     { label: t('nav.docs'), path: '/docs' },
   ];
 
-  const logoSrc = theme === 'dark'
-    ? `${import.meta.env.BASE_URL}logotype-02.svg`
-    : `${import.meta.env.BASE_URL}logotype-02-white.svg`;
+ const darkLogoSrc = `${import.meta.env.BASE_URL}logotype-02-dark.png`;
+  const lightLogoSrc = `${import.meta.env.BASE_URL}logotype-02-white.png`;
+  const logoSrc = theme === 'dark' ? darkLogoSrc : lightLogoSrc;
   const darkLogoSrc = `${import.meta.env.BASE_URL}logotype-02-dark.png`;
   const lightLogoSrc = `${import.meta.env.BASE_URL}logotype-02-white.png`;
   const logoSrc = theme === 'dark' ? darkLogoSrc : lightLogoSrc;
