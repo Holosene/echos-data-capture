@@ -9,14 +9,12 @@ export function DocsPage() {
   const { t } = useTranslation();
 
   return (
-    <div style={{ background: colors.black }}>
-      <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto', padding: 'clamp(40px, 5vw, 80px) var(--content-gutter)' }}>
-        <DocsSection />
-        <div style={{ textAlign: 'center', marginTop: '56px' }}>
-          <Button variant="primary" size="lg" onClick={() => navigate('/scan')}>
-            {t('docs.cta')}
-          </Button>
-        </div>
+    <div style={{ background: colors.black, padding: 'clamp(40px, 5vw, 80px) var(--content-gutter)' }}>
+      <DocsSection />
+      <div style={{ textAlign: 'center', marginTop: '56px' }}>
+        <Button variant="primary" size="lg" onClick={() => navigate('/scan')}>
+          {t('docs.cta')}
+        </Button>
       </div>
     </div>
   );

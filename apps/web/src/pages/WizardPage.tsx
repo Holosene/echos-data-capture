@@ -46,9 +46,9 @@ export function WizardPage() {
       <div
         style={{
           borderBottom: `1px solid ${colors.border}`,
+          padding: '0 clamp(20px, 5vw, 48px)',
           maxWidth: '1100px',
           margin: '0 auto',
-          padding: '0 clamp(20px, 5vw, 48px)',
         }}
       >
         <StepIndicator
@@ -62,6 +62,7 @@ export function WizardPage() {
       <div
         style={{
           maxWidth: '1100px',
+          width: '100%',
           margin: '0 auto',
           padding: 'clamp(24px, 3vw, 48px) clamp(20px, 5vw, 48px)',
         }}
