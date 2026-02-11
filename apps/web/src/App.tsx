@@ -65,8 +65,10 @@ function Topbar() {
     navigate(item.path);
   };
 
-  // Logo: logotype.png en mode sombre, logotype-dark.png en mode clair
-  const logoSrc = `${import.meta.env.BASE_URL}${theme === 'dark' ? 'logotype.png' : 'logotype-dark.png'}`;
+  // Logo: dark.png en mode sombre, white.png en mode clair
+  const darkLogoSrc = `${import.meta.env.BASE_URL}logotype-02-dark.png`;
+  const lightLogoSrc = `${import.meta.env.BASE_URL}logotype-02-white.png`;
+  const logoSrc = theme === 'dark' ? darkLogoSrc : lightLogoSrc;
 
   return (
     <header className="echos-topbar">
