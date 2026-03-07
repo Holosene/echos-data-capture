@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Button, GlassPanel, colors, fonts } from '@echos/ui';
 import { useTranslation } from '../i18n/index.js';
@@ -30,7 +31,7 @@ export function HomePage() {
       setShowFloatingCta(scroller.scrollTop > 150);
     };
     scroller.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // check initial position
+    onScroll();
     return () => scroller.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -600,36 +601,6 @@ export function HomePage() {
         </button>
       </div>
 
-      {/* Floating scan CTA — accent bg, frosted, appears when hero CTA scrolls out */}
-      <button
-        onClick={() => navigate('/scan')}
-        className="floating-scan-cta"
-        style={{
-          position: 'fixed',
-          bottom: '32px',
-          right: '32px',
-          zIndex: 90,
-          padding: '16px 38px 17px',
-          fontSize: '16px',
-          fontWeight: 600,
-          letterSpacing: '-0.01em',
-          fontFamily: 'inherit',
-          color: '#FFFFFF',
-          background: 'var(--cta-bg-soft)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: 'var(--radius-full)',
-          cursor: 'pointer',
-          boxShadow: 'none',
-          opacity: showFloatingCta ? 1 : 0,
-          transform: showFloatingCta ? 'translateY(0)' : 'translateY(20px)',
-          pointerEvents: showFloatingCta ? 'auto' : 'none',
-        }}
-      >
-        {t('home.cta')}
-      </button>
-
       {/* Lightbox */}
       {lightboxOpen && (
         <ImageLightbox
@@ -638,6 +609,40 @@ export function HomePage() {
           onClose={() => setLightboxOpen(false)}
           onNavigate={(index) => setLightboxIndex(index)}
         />
+      )}
+
+      {/* Floating scan CTA — rendered via portal to bypass overflow/transform containing block issues */}
+      {ReactDOM.createPortal(
+        <button
+          onClick={() => navigate('/scan')}
+          className="floating-scan-cta"
+          style={{
+            position: 'fixed',
+            bottom: '32px',
+            right: '32px',
+            zIndex: 9999,
+            padding: '20px 48px 22px',
+            fontSize: '20px',
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            fontFamily: 'inherit',
+            color: '#FFFFFF',
+            background: 'var(--cta-bg-soft)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: 'var(--radius-full)',
+            cursor: 'pointer',
+            boxShadow: 'none',
+            opacity: showFloatingCta ? 1 : 0,
+            transform: showFloatingCta ? 'translateY(0)' : 'translateY(20px)',
+            pointerEvents: showFloatingCta ? 'auto' : 'none',
+            transition: 'opacity 300ms ease, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), background 200ms ease, filter 200ms ease',
+          }}
+        >
+          {t('home.cta')}
+        </button>,
+        document.body,
       )}
     </div>
   );

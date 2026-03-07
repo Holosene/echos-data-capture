@@ -772,24 +772,6 @@ input[type="range"]:disabled { opacity: 0.4; cursor: not-allowed; }
   overflow: hidden;
 }
 
-/* Floating scan CTA — simple hover & click feedback */
-.floating-scan-cta {
-  transition:
-    opacity 300ms ease,
-    transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background 200ms ease,
-    filter 200ms ease;
-}
-.floating-scan-cta:hover {
-  transform: translateY(-3px) scale(1.03) !important;
-  filter: brightness(1.1);
-}
-.floating-scan-cta:active {
-  transform: translateY(1px) scale(0.97) !important;
-  filter: brightness(0.9);
-  transition-duration: 80ms !important;
-}
-
 /* Bottom action buttons — accent hover */
 .echos-action-btn {
   transition: all 150ms ease, transform 150ms ease;
@@ -802,6 +784,17 @@ input[type="range"]:disabled { opacity: 0.4; cursor: not-allowed; }
 .echos-action-btn:active {
   transform: translateY(0) scale(0.97);
   transition-duration: 80ms;
+}
+
+/* Floating scan CTA — hover & click feedback */
+.floating-scan-cta:hover {
+  transform: translateY(-3px) scale(1.03) !important;
+  filter: brightness(1.1);
+}
+.floating-scan-cta:active {
+  transform: translateY(1px) scale(0.97) !important;
+  filter: brightness(0.9);
+  transition-duration: 80ms !important;
 }
 
 /* Scroll performance — GPU compositing + containment */
