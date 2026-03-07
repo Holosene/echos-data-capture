@@ -686,6 +686,13 @@ input[type="range"]:disabled { opacity: 0.4; cursor: not-allowed; }
     grid-column: 1 !important;
   }
 
+  /* Floating CTA — smaller on mobile */
+  .floating-scan-cta {
+    padding: 12px 24px 13px !important;
+    font-size: 14px !important;
+    bottom: 20px !important;
+    right: 16px !important;
+  }
 }
 
 /* ─── Responsive ≤480px ──────────────────────────────────────────── */
@@ -777,6 +784,17 @@ input[type="range"]:disabled { opacity: 0.4; cursor: not-allowed; }
 .echos-action-btn:active {
   transform: translateY(0) scale(0.97);
   transition-duration: 80ms;
+}
+
+/* Floating scan CTA — hover & click feedback */
+.floating-scan-cta:hover {
+  transform: translateY(-3px) scale(1.03) !important;
+  filter: brightness(1.1);
+}
+.floating-scan-cta:active {
+  transform: translateY(1px) scale(0.97) !important;
+  filter: brightness(0.9);
+  transition-duration: 80ms !important;
 }
 
 /* Scroll performance — GPU compositing + containment */
