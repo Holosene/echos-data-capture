@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, GlassPanel, colors, fonts } from '@echos/ui';
 import { useTranslation } from '../i18n/index.js';
@@ -21,19 +21,17 @@ export function HomePage() {
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [showFloatingCta, setShowFloatingCta] = useState(false);
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
-  const heroCtaRef = useRef<HTMLDivElement>(null);
 
-  // Show floating CTA when hero button scrolls out of view
+  // Show floating CTA when user scrolls past the hero section
   useEffect(() => {
-    const el = heroCtaRef.current;
-    if (!el) return;
-    const mainContent = document.getElementById('main-content');
-    const observer = new IntersectionObserver(
-      ([entry]) => setShowFloatingCta(!entry.isIntersecting),
-      { threshold: 0, root: mainContent },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    const scroller = document.getElementById('main-content');
+    if (!scroller) return;
+    const onScroll = () => {
+      setShowFloatingCta(scroller.scrollTop > 300);
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // check initial position
+    return () => scroller.removeEventListener('scroll', onScroll);
   }, []);
 
   const FEATURES = [
