@@ -94,7 +94,7 @@ export function HomePage() {
           {t('home.description')}
         </p>
 
-        <div ref={heroCtaRef} className="hero-cta-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="hero-cta-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <Button variant="primary" size="md" onClick={() => navigate('/scan')}>
             {t('home.cta')}
           </Button>
