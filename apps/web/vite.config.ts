@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execSync } from 'child_process';
+import { publishSessionPlugin } from './vite-plugin-publish.js';
 
 let commitHash = 'unknown';
 try {
@@ -8,7 +9,7 @@ try {
 } catch { /* not in git repo */ }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), publishSessionPlugin()],
   base: '/ecos-data-captured/',
   define: {
     __COMMIT_HASH__: JSON.stringify(commitHash),

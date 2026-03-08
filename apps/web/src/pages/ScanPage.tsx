@@ -38,7 +38,7 @@ import {
   runPipeline as runStorePipeline,
   abort as abortPipeline,
   reset as resetPipeline,
-  markPublished,
+  publishToRepo,
 } from '../store/pipeline-store.js';
 
 type ScanPhase = 'import' | 'crop' | 'settings' | 'processing' | 'viewer';
@@ -564,8 +564,21 @@ export function ScanPage() {
 
   const memEstimate = estimateVolumeMemoryMB(grid);
 
-  // Publishing is now automatic (pipeline-store auto-saves to IndexedDB).
-  // The "Poster" button is no longer needed — sessions are saved on completion.
+  // ─── Publish session to repo ─────────────────────────────────────────
+  const [publishing, setPublishing] = useState(false);
+
+  const handlePublish = useCallback(async () => {
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      await publishToRepo();
+      setPublished(true);
+    } catch (err) {
+      setPublishError(`Erreur: ${(err as Error).message}`);
+    } finally {
+      setPublishing(false);
+    }
+  }, []);
 
   // ─── Render ───────────────────────────────────────────────────────────
 
@@ -1108,7 +1121,7 @@ export function ScanPage() {
         {/* ── Viewer Phase ──────────────────────────────────────────── */}
         {phase === 'viewer' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, animation: 'echos-fade-in 500ms ease' }}>
-            {/* Session saved badge */}
+            {/* Publish bar */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -1119,7 +1132,13 @@ export function ScanPage() {
             }}>
               <div style={{ flex: 1 }} />
 
-              {published && (
+              {publishError && (
+                <span style={{ fontSize: '12px', color: colors.error, maxWidth: '400px', textAlign: 'right' }}>
+                  {publishError}
+                </span>
+              )}
+
+              {published ? (
                 <span style={{
                   padding: '8px 20px',
                   borderRadius: '9999px',
@@ -1128,8 +1147,17 @@ export function ScanPage() {
                   fontSize: '13px',
                   fontWeight: 600,
                 }}>
-                  Session enregistrée
+                  Session publiée
                 </span>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="md"
+                  disabled={publishing || !volumeData}
+                  onClick={handlePublish}
+                >
+                  {publishing ? 'Publication...' : 'Poster'}
+                </Button>
               )}
             </div>
 

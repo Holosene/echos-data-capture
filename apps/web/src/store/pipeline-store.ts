@@ -4,10 +4,9 @@
  * Manages the volume generation pipeline OUTSIDE React component lifecycle.
  * This ensures that:
  *   - If the user navigates away during generation, the Worker keeps running
- *   - When generation completes, results are auto-saved to IndexedDB
+ *   - When generation completes, results are saved to IndexedDB (navigation safety)
+ *   - "Poster" publishes to the repo via Vite dev server API (persistent + shared)
  *   - When ScanPage remounts, it can restore in-progress or completed state
- *
- * The store holds: Worker ref, progress, completed result, video blob URLs.
  */
 
 import type {
@@ -19,6 +18,7 @@ import type {
   CropRect,
   SessionManifestEntry,
 } from '@echos/core';
+import { serializeVolume } from '@echos/core';
 import { saveSession, saveVolume, findDuplicate } from './session-db.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ export interface PipelineResult {
   // Session metadata
   videoFileName: string;
   gpxFileName: string;
+  gpxText: string;
   gpxPoints: Array<{ lat: number; lon: number }>;
   bounds: [number, number, number, number];
   totalDistanceM: number;
@@ -54,7 +55,10 @@ export interface PipelineState {
   progress: PipelineV2Progress | null;
   result: PipelineResult | null;
   error: string | null;
+  /** Whether the session has been published to the repo (via Vite dev API). */
   published: boolean;
+  /** Whether saving to IDB completed (for navigation safety). */
+  savedToIDB: boolean;
 }
 
 type Listener = (state: PipelineState) => void;
@@ -70,6 +74,7 @@ const state: PipelineState = {
   result: null,
   error: null,
   published: false,
+  savedToIDB: false,
 };
 
 const listeners = new Set<Listener>();
@@ -105,10 +110,66 @@ export function reset() {
   abort();
   state.result = null;
   state.published = false;
+  state.savedToIDB = false;
   notify();
 }
 
-export function markPublished() {
+/**
+ * Publish session to the repo via the Vite dev server API.
+ * Writes .echos-vol + GPX + updates manifest.json in public/sessions/.
+ */
+export async function publishToRepo(): Promise<void> {
+  const r = state.result;
+  if (!r) throw new Error('No pipeline result to publish');
+
+  const manifest: SessionManifestEntry = {
+    id: r.sessionId,
+    name: r.videoFileName.replace(/\.\w+$/, ''),
+    createdAt: new Date().toISOString(),
+    videoFileName: r.videoFileName,
+    gpxFileName: r.gpxFileName,
+    bounds: r.bounds,
+    totalDistanceM: r.totalDistanceM,
+    durationS: r.durationS,
+    frameCount: r.instrumentFrames.length,
+    gridDimensions: r.volumeDims,
+    preprocessing: r.preprocessing,
+    beam: r.beam,
+    files: {
+      gpx: r.gpxFileName || undefined,
+      volumeInstrument: 'volume-instrument.echos-vol',
+    },
+  };
+
+  // Serialize volume to binary
+  const volumeBuffer = serializeVolume({
+    data: r.volumeData,
+    dimensions: r.volumeDims,
+    extent: r.volumeExtent,
+  });
+
+  // Build wire protocol: [headerLen:u32] [headerJSON] [volumeBytes]
+  const header = JSON.stringify({
+    manifest,
+    volumeSize: volumeBuffer.byteLength,
+    gpxText: r.gpxText || null,
+  });
+  const headerBytes = new TextEncoder().encode(header);
+  const payload = new Uint8Array(4 + headerBytes.length + volumeBuffer.byteLength);
+  new DataView(payload.buffer).setUint32(0, headerBytes.length, true);
+  payload.set(headerBytes, 4);
+  payload.set(new Uint8Array(volumeBuffer), 4 + headerBytes.length);
+
+  const resp = await fetch('/api/publish-session', {
+    method: 'POST',
+    body: payload,
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(err.error || `HTTP ${resp.status}`);
+  }
+
   state.published = true;
   notify();
 }
@@ -116,9 +177,7 @@ export function markPublished() {
 /**
  * Starts the pipeline. Runs frame extraction and Worker-based projection.
  * Survives component unmounts — the Worker and extraction continue.
- *
- * @param dispatch — AppState dispatch (for ADD_SESSION when done)
- * @param t — translation function (for progress messages)
+ * On completion, auto-saves to IndexedDB for navigation safety.
  */
 export async function runPipeline(opts: {
   videoFile: File;
@@ -132,12 +191,11 @@ export async function runPipeline(opts: {
   grid: VolumeGridSettings;
   fpsExtraction: number;
   progressMessage: (key: string) => string;
-  onSessionCreated?: (sessionId: string, result: PipelineResult) => void;
 }): Promise<void> {
   const {
     videoFile, videoUrl, gpxTrack, gpxFile, videoDurationS,
     crop, preprocessing, beam, grid, fpsExtraction,
-    progressMessage, onSessionCreated,
+    progressMessage,
   } = opts;
 
   aborted = false;
@@ -146,7 +204,14 @@ export async function runPipeline(opts: {
   state.result = null;
   state.error = null;
   state.published = false;
+  state.savedToIDB = false;
   notify();
+
+  // Read GPX text for later repo publishing
+  let gpxText = '';
+  if (gpxFile && gpxFile.size > 0) {
+    try { gpxText = await gpxFile.text(); } catch { /* empty */ }
+  }
 
   // Create video element (module-level, not tied to React)
   const video = document.createElement('video');
@@ -301,13 +366,13 @@ export async function runPipeline(opts: {
 
   // Build session metadata
   const sessionId = crypto.randomUUID();
-  const gpxPoints = gpxTrack ? gpxTrack.points.map((p) => ({ lat: p.lat, lon: p.lon })) : [];
+  const gpxPoints = gpxTrack ? gpxTrack.points.map((pt: { lat: number; lon: number }) => ({ lat: pt.lat, lon: pt.lon })) : [];
   const bounds: [number, number, number, number] = gpxPoints.length > 0
     ? [
-        Math.min(...gpxPoints.map((p) => p.lat)),
-        Math.min(...gpxPoints.map((p) => p.lon)),
-        Math.max(...gpxPoints.map((p) => p.lat)),
-        Math.max(...gpxPoints.map((p) => p.lon)),
+        Math.min(...gpxPoints.map((pt: { lat: number }) => pt.lat)),
+        Math.min(...gpxPoints.map((pt: { lon: number }) => pt.lon)),
+        Math.max(...gpxPoints.map((pt: { lat: number }) => pt.lat)),
+        Math.max(...gpxPoints.map((pt: { lon: number }) => pt.lon)),
       ]
     : [0, 0, 0, 0];
 
@@ -319,6 +384,7 @@ export async function runPipeline(opts: {
     instrumentFrames: preprocessedFrames,
     videoFileName: videoFile.name,
     gpxFileName: gpxFile?.name ?? '',
+    gpxText,
     gpxPoints,
     bounds,
     totalDistanceM: gpxTrack?.totalDistanceM ?? 0,
@@ -330,12 +396,11 @@ export async function runPipeline(opts: {
 
   // Show ready state
   state.progress = { stage: 'ready', progress: 1, message: progressMessage('ready') };
+  state.result = pipelineResult;
+  state.status = 'ready';
   notify();
 
-  // Auto-save to IndexedDB immediately (survive even tab close)
-  state.status = 'saving';
-  notify();
-
+  // Auto-save to IndexedDB for navigation safety (local only, not shared)
   try {
     const duplicate = await findDuplicate(pipelineResult.videoFileName, pipelineResult.gpxFileName);
     if (!duplicate) {
@@ -369,21 +434,10 @@ export async function runPipeline(opts: {
         manifest,
         gpxTrack: gpxPoints,
       });
-
-      state.published = true;
-    } else {
-      // Duplicate exists — still keep the result viewable
-      state.published = true;
     }
+    state.savedToIDB = true;
+    notify();
   } catch {
-    // IDB save failed — user can still view and manually publish later
-    state.published = false;
+    // IDB save failed — user can still view and publish to repo
   }
-
-  state.result = pipelineResult;
-  state.status = 'ready';
-  notify();
-
-  // Notify caller (ScanPage if still mounted) so it can update AppState
-  onSessionCreated?.(sessionId, pipelineResult);
 }
