@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execSync } from 'child_process';
 import { publishSessionPlugin } from './vite-plugin-publish.js';
+import path from 'path';
 
 let commitHash = 'unknown';
 try {
@@ -21,6 +22,13 @@ export default defineConfig({
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  resolve: {
+    alias: {
+      '@echos/core': path.resolve(__dirname, '../../packages/core/src'),
+      '@echos/ui': path.resolve(__dirname, '../../packages/ui/src'),
+      '@echos/ui/styles.css': path.resolve(__dirname, '../../packages/ui/src/styles.css'),
     },
   },
   build: {
