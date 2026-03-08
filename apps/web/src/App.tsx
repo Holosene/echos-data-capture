@@ -17,6 +17,8 @@ import {
   manifestEntryToSession,
   parseGpx,
 } from '@echos/core';
+import type { SessionManifestEntry, RecordingSession } from '@echos/core';
+import { loadAllSessions } from './store/session-db.js';
 
 const SessionViewerPage = lazy(() => import('./pages/SessionViewerPage.js'));
 
@@ -208,36 +210,51 @@ function Topbar() {
 export function App() {
   const [state, dispatch] = useReducer(appReducer, INITIAL_STATE);
 
-  // Load pre-generated sessions manifest at boot
+  // Load sessions at boot: static manifest + IndexedDB (user-published)
   useEffect(() => {
     const basePath = import.meta.env.BASE_URL ?? '/ecos-data-captured/';
-    fetchSessionManifest(basePath)
+
+    // 1. Load static manifest
+    const staticPromise = fetchSessionManifest(basePath)
       .then(async (entries) => {
         const sessions = entries.map(manifestEntryToSession);
         const gpxTracks = new Map<string, Array<{ lat: number; lon: number }>>();
-
-        // Fetch all GPX tracks in parallel (lightweight, few KB each)
         await Promise.allSettled(
           entries.map(async (entry) => {
             try {
-              const track = await fetchSessionGpxTrack(
-                basePath,
-                entry.id,
-                entry.files.gpx,
-                parseGpx,
-              );
+              const track = await fetchSessionGpxTrack(basePath, entry.id, entry.files.gpx, parseGpx);
               gpxTracks.set(entry.id, track);
-            } catch {
-              // GPX fetch failed — session still shows on map via bounds
-            }
+            } catch { /* bounds fallback */ }
           }),
         );
-
-        dispatch({ type: 'LOAD_MANIFEST', entries, sessions, gpxTracks });
+        return { entries, sessions, gpxTracks };
       })
-      .catch(() => {
-        // Manifest not found — app works normally without pre-generated sessions
-      });
+      .catch(() => ({
+        entries: [] as SessionManifestEntry[],
+        sessions: [] as RecordingSession[],
+        gpxTracks: new Map<string, Array<{ lat: number; lon: number }>>(),
+      }));
+
+    // 2. Load user-published sessions from IndexedDB
+    const idbPromise = loadAllSessions().catch(() => []);
+
+    Promise.all([staticPromise, idbPromise]).then(([staticData, idbSessions]) => {
+      const allEntries = [...staticData.entries];
+      const allSessions = [...staticData.sessions];
+      const allTracks = new Map(staticData.gpxTracks);
+
+      // Merge IndexedDB sessions (avoid duplicates with static)
+      for (const stored of idbSessions) {
+        if (allEntries.some((e) => e.id === stored.id)) continue;
+        allEntries.push(stored.manifest);
+        allSessions.push(manifestEntryToSession(stored.manifest));
+        if (stored.gpxTrack.length > 0) {
+          allTracks.set(stored.id, stored.gpxTrack);
+        }
+      }
+
+      dispatch({ type: 'LOAD_MANIFEST', entries: allEntries, sessions: allSessions, gpxTracks: allTracks });
+    });
   }, []);
 
   return (

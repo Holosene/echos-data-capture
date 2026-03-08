@@ -32,6 +32,8 @@ import {
 import { useAppState } from '../store/app-state.js';
 import { useTranslation } from '../i18n/index.js';
 import { VolumeViewer } from '../components/VolumeViewer.js';
+import { saveSession, saveVolume, findDuplicate } from '../store/session-db.js';
+import type { SessionManifestEntry } from '@echos/core';
 
 type ScanPhase = 'import' | 'crop' | 'settings' | 'processing' | 'viewer';
 
@@ -154,6 +156,12 @@ export function ScanPage() {
   const [stepBarVisible, setStepBarVisible] = useState(true);
   const [stepBarAnimating, setStepBarAnimating] = useState(false);
   const [loadingTest, setLoadingTest] = useState(false);
+
+  // Publishing state
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const currentSessionIdRef = useRef<string | null>(null);
 
   // Sync: distance-over-time chart
   const enriched = useMemo(
@@ -637,6 +645,9 @@ export function ScanPage() {
     await new Promise((r) => setTimeout(r, 1200));
 
     const sessionId = crypto.randomUUID();
+    currentSessionIdRef.current = sessionId;
+    setPublished(false);
+    setPublishError(null);
     const gpxPoints = track ? track.points.map((p) => ({ lat: p.lat, lon: p.lon })) : undefined;
     const bounds: [number, number, number, number] = gpxPoints
       ? [
@@ -678,6 +689,81 @@ export function ScanPage() {
   }, [state, crop, preprocessing, beam, grid, fpsExtraction, dispatch, t]);
 
   const memEstimate = estimateVolumeMemoryMB(grid);
+
+  // ─── Publish session to IndexedDB ─────────────────────────────────────
+
+  const handlePublish = useCallback(async () => {
+    if (!volumeData || !currentSessionIdRef.current) return;
+
+    const videoFileName = state.videoFile?.name ?? '';
+    const gpxFileName = state.gpxFile?.name ?? '';
+
+    setPublishing(true);
+    setPublishError(null);
+
+    try {
+      // Duplicate detection
+      const duplicate = await findDuplicate(videoFileName, gpxFileName);
+      if (duplicate) {
+        setPublishError(
+          `Cette session existe déjà : "${duplicate.manifest.name}" (${new Date(duplicate.manifest.createdAt).toLocaleDateString('fr-FR')})`,
+        );
+        setPublishing(false);
+        return;
+      }
+
+      const sessionId = currentSessionIdRef.current;
+      const track = state.gpxTrack;
+      const gpxPoints = track ? track.points.map((p) => ({ lat: p.lat, lon: p.lon })) : [];
+      const bounds: [number, number, number, number] = gpxPoints.length > 0
+        ? [
+            Math.min(...gpxPoints.map((p) => p.lat)),
+            Math.min(...gpxPoints.map((p) => p.lon)),
+            Math.max(...gpxPoints.map((p) => p.lat)),
+            Math.max(...gpxPoints.map((p) => p.lon)),
+          ]
+        : [0, 0, 0, 0];
+
+      const manifest: SessionManifestEntry = {
+        id: sessionId,
+        name: videoFileName.replace(/\.\w+$/, ''),
+        createdAt: new Date().toISOString(),
+        videoFileName,
+        gpxFileName,
+        bounds,
+        totalDistanceM: track?.totalDistanceM ?? 0,
+        durationS: track?.durationS ?? state.videoDurationS,
+        frameCount: instrumentFrames?.length ?? 0,
+        gridDimensions: volumeDims,
+        preprocessing,
+        beam,
+        files: {
+          gpx: gpxFileName,
+          volumeInstrument: 'volume-instrument.echos-vol',
+        },
+      };
+
+      // Save volume to IndexedDB
+      await saveVolume(sessionId, 'instrument', {
+        data: volumeData,
+        dimensions: volumeDims,
+        extent: volumeExtent,
+      });
+
+      // Save session manifest + GPX track
+      await saveSession({
+        id: sessionId,
+        manifest,
+        gpxTrack: gpxPoints,
+      });
+
+      setPublished(true);
+    } catch (err) {
+      setPublishError(`Erreur: ${(err as Error).message}`);
+    } finally {
+      setPublishing(false);
+    }
+  }, [volumeData, volumeDims, volumeExtent, state, preprocessing, beam, instrumentFrames]);
 
   // ─── Render ───────────────────────────────────────────────────────────
 
@@ -1220,6 +1306,46 @@ export function ScanPage() {
         {/* ── Viewer Phase ──────────────────────────────────────────── */}
         {phase === 'viewer' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, animation: 'echos-fade-in 500ms ease' }}>
+            {/* Publish bar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '10px 16px',
+              borderBottom: `1px solid ${colors.border}`,
+              flexShrink: 0,
+            }}>
+              <div style={{ flex: 1 }} />
+
+              {publishError && (
+                <span style={{ fontSize: '12px', color: colors.error, maxWidth: '400px', textAlign: 'right' }}>
+                  {publishError}
+                </span>
+              )}
+
+              {published ? (
+                <span style={{
+                  padding: '8px 20px',
+                  borderRadius: '9999px',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  color: '#22c55e',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}>
+                  Session enregistrée
+                </span>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="md"
+                  disabled={publishing || !volumeData}
+                  onClick={handlePublish}
+                >
+                  {publishing ? 'Enregistrement...' : 'Poster'}
+                </Button>
+              )}
+            </div>
+
             <VolumeViewer
               volumeData={volumeData}
               dimensions={volumeDims}
@@ -1242,6 +1368,8 @@ export function ScanPage() {
                 setPhase('import');
                 setVolumeData(null);
                 setFrameReady(false);
+                setPublished(false);
+                setPublishError(null);
               }}
             />
           </div>

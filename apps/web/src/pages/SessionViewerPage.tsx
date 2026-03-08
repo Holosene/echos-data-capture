@@ -24,6 +24,7 @@ import type { SessionManifestEntry, VolumeSnapshot } from '@echos/core';
 import { useAppState } from '../store/app-state.js';
 import { useTranslation } from '../i18n/index.js';
 import { VolumeViewer } from '../components/VolumeViewer.js';
+import { loadVolume as loadVolumeFromIDB } from '../store/session-db.js';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -52,6 +53,7 @@ export default function SessionViewerPage() {
 
   const basePath = import.meta.env.BASE_URL ?? '/ecos-data-captured/';
 
+  /** Try IndexedDB first (user-published sessions), then fall back to static files. */
   const loadVolumes = useCallback(async () => {
     if (!entry || !sessionId) return;
 
@@ -60,9 +62,37 @@ export default function SessionViewerPage() {
     setProgress(0);
 
     try {
+      // ── Try IndexedDB first ──
+      let loadedFromIDB = false;
+      try {
+        const idbBuffer = await loadVolumeFromIDB(sessionId, 'instrument');
+        if (idbBuffer) {
+          const snap = deserializeVolume(idbBuffer);
+          setInstrumentData(snap.data);
+          setInstrumentDims(snap.dimensions);
+          setInstrumentExtent(snap.extent);
+          setProgress(50);
+          loadedFromIDB = true;
+
+          // Also try spatial from IDB
+          const idbSpatial = await loadVolumeFromIDB(sessionId, 'spatial');
+          if (idbSpatial) {
+            const snapS = deserializeVolume(idbSpatial);
+            setSpatialData(snapS.data);
+            setSpatialDims(snapS.dimensions);
+            setSpatialExtent(snapS.extent);
+          }
+          setProgress(100);
+          setLoadState('ready');
+          return;
+        }
+      } catch {
+        // IndexedDB not available or empty — try static files
+      }
+
+      // ── Fall back to static files ──
       const fetches: Promise<void>[] = [];
 
-      // Load instrument volume
       if (entry.files.volumeInstrument) {
         fetches.push(
           fetchSessionVolume(basePath, sessionId, entry.files.volumeInstrument)
@@ -76,7 +106,6 @@ export default function SessionViewerPage() {
         );
       }
 
-      // Load spatial volume
       if (entry.files.volumeSpatial) {
         fetches.push(
           fetchSessionVolume(basePath, sessionId, entry.files.volumeSpatial)
