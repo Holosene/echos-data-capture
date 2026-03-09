@@ -51,6 +51,8 @@ function ProgressiveImg({ name, alt, loading, style, onError }: {
           src={`${base}${name}.png`}
           alt={alt}
           loading={loading ?? 'lazy'}
+          decoding={loading === 'eager' ? 'sync' : 'async'}
+          {...(loading === 'eager' ? { fetchPriority: 'high' } as any : {})}
           onLoad={() => setLoaded(true)}
           onError={onError}
           style={{
@@ -190,7 +192,7 @@ export function HomePage() {
               <ProgressiveImg
                 name={name}
                 alt=""
-                loading={i === 0 ? 'eager' : 'lazy'}
+                loading="eager"
                 style={{ transition: 'transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease' }}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
@@ -401,6 +403,11 @@ export function HomePage() {
           {focusedSessionId && (() => {
             const session = state.sessions.find((s) => s.id === focusedSessionId);
             if (!session) return null;
+            const basePath = import.meta.env.BASE_URL ?? '/ecos-data-captured/';
+            const manifestEntry = state.manifestEntries.find((e) => e.id === focusedSessionId);
+            const thumbnailUrl = manifestEntry?.files.thumbnail
+              ? `${basePath}sessions/${focusedSessionId}/${manifestEntry.files.thumbnail}`
+              : null;
             return (
               <div className="map-info-panel" style={{
                 flex: '0 0 75%',
@@ -443,6 +450,30 @@ export function HomePage() {
 
                 {/* Content area — vertically centered */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(20px, 3vw, 40px) clamp(24px, 3vw, 48px)', gap: '20px' }}>
+                  {/* Session thumbnail / profile photo */}
+                  {thumbnailUrl && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <img
+                        src={thumbnailUrl}
+                        alt={session.name}
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: `2px solid ${colors.accent}`,
+                          background: colors.black,
+                          flexShrink: 0,
+                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      <div style={{ fontSize: '11px', color: colors.text3, lineHeight: 1.4 }}>
+                        <div style={{ color: colors.accent, fontWeight: 600, fontSize: '12px' }}>ECOS</div>
+                        Session enregistrée
+                      </div>
+                    </div>
+                  )}
+
                   {/* Title + date */}
                   <div>
                     <h3 style={{

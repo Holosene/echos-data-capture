@@ -166,32 +166,82 @@ export function MapView({
       layersRef.current.set(session.id, polyline);
     });
 
+  }, [sessions, selectedSessionId, gpxTracks, onSessionSelect, basePath, manifestEntries]);
+
+  // Fit bounds only when sessions or gpxTracks change — not on selection change
+  const prevSessionsRef = useRef<string>('');
+  useEffect(() => {
+    const map = leafletMap.current;
+    if (!map || sessions.length === 0) return;
+
+    // Build a stable key from session IDs + track availability to avoid redundant zooms
+    const key = sessions.map((s) => s.id).join(',') + '|' + (gpxTracks?.size ?? 0);
+    if (key === prevSessionsRef.current) return;
+    prevSessionsRef.current = key;
+
+    const bounds = L.latLngBounds([]);
+    sessions.forEach((session) => {
+      const track = gpxTracks?.get(session.id);
+      if (track && track.length >= 2) {
+        track.forEach((p) => bounds.extend(L.latLng(p.lat, p.lon)));
+      } else if (session.bounds) {
+        const [minLat, minLon, maxLat, maxLon] = session.bounds;
+        bounds.extend(L.latLng((minLat + maxLat) / 2, (minLon + maxLon) / 2));
+      }
+    });
+
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [20, 20], maxZoom: 18 });
     }
-  }, [sessions, selectedSessionId, gpxTracks, onSessionSelect, basePath, manifestEntries]);
+  }, [sessions, gpxTracks]);
 
   // Deep focus zoom when a session is selected and deepFocus is true
+  // When deepFocus goes false, restore the global bounds view
+  const prevDeepFocusRef = useRef(deepFocus);
   useEffect(() => {
     const map = leafletMap.current;
-    if (!map || !deepFocus || !selectedSessionId) return;
+    if (!map) return;
 
-    const session = sessions.find((s) => s.id === selectedSessionId);
-    if (!session) return;
+    const wasFocused = prevDeepFocusRef.current;
+    prevDeepFocusRef.current = deepFocus;
 
-    const track = gpxTracks?.get(session.id);
-    if (track && track.length >= 2) {
-      const latLngs = track.map((p) => L.latLng(p.lat, p.lon));
-      const traceBounds = L.latLngBounds(latLngs);
-      map.fitBounds(traceBounds, { padding: [20, 20], maxZoom: 18, animate: true });
-    } else if (session.bounds) {
-      const [minLat, minLon, maxLat, maxLon] = session.bounds;
-      const center = L.latLng((minLat + maxLat) / 2, (minLon + maxLon) / 2);
-      map.setView(center, 16, { animate: true });
+    if (deepFocus && selectedSessionId) {
+      const session = sessions.find((s) => s.id === selectedSessionId);
+      if (!session) return;
+
+      const track = gpxTracks?.get(session.id);
+      if (track && track.length >= 2) {
+        const latLngs = track.map((p) => L.latLng(p.lat, p.lon));
+        const traceBounds = L.latLngBounds(latLngs);
+        map.fitBounds(traceBounds, { padding: [20, 20], maxZoom: 18, animate: true });
+      } else if (session.bounds) {
+        const [minLat, minLon, maxLat, maxLon] = session.bounds;
+        const center = L.latLng((minLat + maxLat) / 2, (minLon + maxLon) / 2);
+        map.setView(center, 16, { animate: true });
+      }
+
+      // Invalidate size after container transitions
+      setTimeout(() => map.invalidateSize(), 350);
+    } else if (wasFocused && !deepFocus) {
+      // Closing panel — invalidate size after CSS transition, then restore all-sessions bounds
+      setTimeout(() => {
+        map.invalidateSize();
+        // Recompute bounds for all sessions
+        const allBounds = L.latLngBounds([]);
+        sessions.forEach((session) => {
+          const track = gpxTracks?.get(session.id);
+          if (track && track.length >= 2) {
+            track.forEach((p) => allBounds.extend(L.latLng(p.lat, p.lon)));
+          } else if (session.bounds) {
+            const [minLat, minLon, maxLat, maxLon] = session.bounds;
+            allBounds.extend(L.latLng((minLat + maxLat) / 2, (minLon + maxLon) / 2));
+          }
+        });
+        if (allBounds.isValid()) {
+          map.fitBounds(allBounds, { padding: [20, 20], maxZoom: 18, animate: true });
+        }
+      }, 450);
     }
-
-    // Invalidate size after container transitions
-    setTimeout(() => map.invalidateSize(), 350);
   }, [deepFocus, selectedSessionId, sessions, gpxTracks]);
 
   // Two-finger touch handling — show hint on single-finger, enable drag on two-finger

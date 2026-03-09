@@ -760,6 +760,8 @@ export function VolumeViewer({
 
   // Temporal playback state
   const hasFrames = !!(frames && frames.length > 0);
+  const hasSpatialData = !!(spatialData && spatialData.length > 0);
+  const hasVolumeData = !!(volumeData && volumeData.length > 0);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(20);
@@ -1194,8 +1196,6 @@ export function VolumeViewer({
   const totalFrames = frames?.length ?? 0;
   const currentTimeS = hasFrames && frames!.length > 0 ? frames![currentFrame]?.timeS ?? 0 : 0;
 
-  const hasSpatialData = !!(spatialData && spatialData.length > 0);
-  const hasVolumeData = !!(volumeData && volumeData.length > 0);
   const showB = hasFrames || hasSpatialData;
   const showC = (hasFrames || hasVolumeData) && !!beam && !!grid;
 
