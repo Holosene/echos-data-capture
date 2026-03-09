@@ -210,25 +210,27 @@ function SliceView({
         </span>
       </div>
 
-      {/* Canvas with clean border */}
+      {/* Canvas with clean border — aspect-ratio box so canvas fills width */}
       <div style={{
         width: '100%',
         borderRadius: '16px',
         border: `1.5px solid ${colors.border}`,
         overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        maxHeight: isPortrait ? '500px' : '300px',
-        minHeight: '120px',
+        position: 'relative',
+        aspectRatio: `${contentW} / ${contentH}`,
+        maxHeight: isPortrait ? '600px' : '400px',
+        minHeight: '140px',
+        background: '#0a0a0f',
       }}>
         <canvas
           ref={canvasRef}
           style={{
-            maxWidth: '100%',
-            maxHeight: isPortrait ? '500px' : '300px',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             imageRendering: 'pixelated',
-            objectFit: 'contain',
             display: 'block',
           }}
         />
@@ -241,7 +243,7 @@ function SliceView({
         marginTop: '12px',
       }}>
         <div style={{
-          width: 'max(200px, 50%)',
+          width: 'max(240px, 60%)',
           padding: '8px 16px',
           background: colors.surface,
           borderRadius: '24px',
@@ -320,8 +322,8 @@ export function SlicePanel({ volumeData, dimensions }: SlicePanelProps) {
         ))}
       </div>
 
-      {/* 2-column layout: cross-section + plan */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      {/* 2-column layout: cross-section + plan — auto rows so each fills naturally */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', alignItems: 'start' }}>
         <SliceView
           volumeData={volumeData}
           dimensions={dimensions}

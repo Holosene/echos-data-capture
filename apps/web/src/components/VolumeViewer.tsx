@@ -1680,7 +1680,7 @@ export function VolumeViewer({
     if (showB) mobileSections.push({ mode: 'spatial', ref: containerBRef, title: t('v2.vol.block' as TranslationKey), subtitle: t('v2.vol.blockDesc' as TranslationKey) });
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '100vw', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '100vw', overflow: 'hidden', padding: '0 var(--page-gutter)' }}>
         {/* Title */}
         <div style={{ paddingTop: '16px', marginBottom: '12px' }}>
           <h1 style={{ margin: 0, color: colors.text1, fontSize: '20px', fontWeight: 600, marginBottom: '2px' }}>
@@ -1767,7 +1767,7 @@ export function VolumeViewer({
   // ─── DESKTOP LAYOUT (unchanged) ────────────────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', padding: '0 var(--content-gutter)' }}>
       {/* ── Title — always at top, full width ───────────── */}
       <div style={{ paddingTop: 'clamp(32px, 5vh, 64px)', marginBottom: '40px' }}>
         <h1 style={{
