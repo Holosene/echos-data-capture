@@ -196,11 +196,11 @@ export interface RendererSettings {
 export const DEFAULT_RENDERER: RendererSettings = {
   opacityScale: 1.0,
   threshold: 0.02,
-  densityScale: 1.2,
-  smoothing: 0.4,
+  densityScale: 1.0,
+  smoothing: 0.15,
   showBeam: false,
   ghostEnhancement: 0.0,
-  stepCount: 256,
+  stepCount: 192,
   chromaticMode: 'sonar-original',
 };
 

@@ -604,15 +604,6 @@ float sampleVolume(vec3 pos) {
   return val;
 }
 
-// Gradient-based lighting
-vec3 computeGradient(vec3 pos) {
-  vec3 ts = 1.5 / uVolumeSize;
-  float dx = texture(uVolume, pos + vec3(ts.x, 0, 0)).r - texture(uVolume, pos - vec3(ts.x, 0, 0)).r;
-  float dy = texture(uVolume, pos + vec3(0, ts.y, 0)).r - texture(uVolume, pos - vec3(0, ts.y, 0)).r;
-  float dz = texture(uVolume, pos + vec3(0, 0, ts.z)).r - texture(uVolume, pos - vec3(0, 0, ts.z)).r;
-  return vec3(dx, dy, dz);
-}
-
 void main() {
   vec3 rayOrigin = uCameraPos;
   vec3 rayDir = normalize(vWorldPos - uCameraPos);
@@ -626,8 +617,6 @@ void main() {
   float stepSize = (tFar - tNear) / float(uStepCount);
   vec4 accum = vec4(0.0);
   float t = tNear;
-
-  vec3 lightDir = normalize(-rayDir);
 
   for (int i = 0; i < 512; i++) {
     if (i >= uStepCount) break;
@@ -644,18 +633,6 @@ void main() {
       if (density > uThreshold) {
         float lookupVal = clamp(density, 0.0, 1.0);
         vec4 tfColor = texture(uTransferFunction, vec2(lookupVal, 0.5));
-
-        // Gradient-based shading
-        vec3 grad = computeGradient(uvw);
-        float gradMag = length(grad);
-        if (gradMag > 0.01) {
-          vec3 normal = normalize(grad);
-          float diffuse = max(dot(normal, lightDir), 0.0);
-          vec3 halfVec = normalize(lightDir - rayDir);
-          float specular = pow(max(dot(normal, halfVec), 0.0), 40.0);
-          float shade = mix(1.0, 0.3 + 0.6 * diffuse + 0.25 * specular, min(gradMag * 5.0, 1.0));
-          tfColor.rgb *= shade;
-        }
 
         tfColor.a *= uOpacityScale * stepSize * 100.0;
         tfColor.a = clamp(tfColor.a, 0.0, 1.0);
