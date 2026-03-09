@@ -62,21 +62,45 @@ function buildSliceVolumeFromFrames(
 ): { data: Float32Array; dimensions: [number, number, number] } | null {
   if (!frameList || frameList.length === 0) return null;
   const dimX = frameList[0].width;
-  const dimY = frameList.length;
   const dimZ = frameList[0].height;
   if (dimX === 0 || dimZ === 0) return null;
-  const data = new Float32Array(dimX * dimY * dimZ);
-  const strideZ = dimY * dimX;
-  for (let yi = 0; yi < dimY; yi++) {
-    const intensity = frameList[yi].intensity;
-    const yiOffset = yi * dimX;
-    for (let zi = 0; zi < dimZ; zi++) {
-      const srcOffset = zi * dimX;
-      const dstOffset = zi * strideZ + yiOffset;
-      data.set(intensity.subarray(srcOffset, srcOffset + dimX), dstOffset);
+
+  // Cap frame count to avoid OOM — 128 frames × 256×256 ≈ 32MB which is safe.
+  // For larger sets, subsample evenly to preserve temporal coverage.
+  const MAX_SLICE_FRAMES = 128;
+  let usedFrames = frameList;
+  if (frameList.length > MAX_SLICE_FRAMES) {
+    const step = frameList.length / MAX_SLICE_FRAMES;
+    usedFrames = [];
+    for (let i = 0; i < MAX_SLICE_FRAMES; i++) {
+      usedFrames.push(frameList[Math.floor(i * step)]);
     }
   }
-  return { data, dimensions: [dimX, dimY, dimZ] };
+
+  const dimY = usedFrames.length;
+  const totalSize = dimX * dimY * dimZ;
+
+  // Guard against excessively large allocations (>256MB)
+  if (totalSize > 64_000_000) return null;
+
+  try {
+    const data = new Float32Array(totalSize);
+    const strideZ = dimY * dimX;
+    for (let yi = 0; yi < dimY; yi++) {
+      const intensity = usedFrames[yi].intensity;
+      const yiOffset = yi * dimX;
+      for (let zi = 0; zi < dimZ; zi++) {
+        const srcOffset = zi * dimX;
+        const dstOffset = zi * strideZ + yiOffset;
+        data.set(intensity.subarray(srcOffset, srcOffset + dimX), dstOffset);
+      }
+    }
+    return { data, dimensions: [dimX, dimY, dimZ] };
+  } catch {
+    // OOM or other allocation failure — skip slice volume
+    console.warn('[VolumeViewer] Failed to build slice volume — too many frames');
+    return null;
+  }
 }
 
 // ─── Rendu B: windowed volume for temporal playback ────────────────────────
@@ -758,7 +782,12 @@ export function VolumeViewer({
 
   const fullSliceVolume = useMemo(() => {
     if (!frames || frames.length === 0) return null;
-    return buildSliceVolumeFromFrames(frames);
+    try {
+      return buildSliceVolumeFromFrames(frames);
+    } catch {
+      console.warn('[VolumeViewer] Slice volume build failed');
+      return null;
+    }
   }, [frames]);
 
   // ─── Initialize 3 renderers — strict defaults, no localStorage ──────────
@@ -768,35 +797,39 @@ export function VolumeViewer({
     // Mobile speed multiplier — reduced max speed on mobile
     const mobileSpeedMul = isMobile ? 0.15 : 1;
 
-    // Mode A — VolumeRenderer + DEFAULT_CALIBRATION
-    // DO NOT call setCameraPreset after construction — constructor already applies orbit from calibration
-    if (containerARef.current && !rendererARef.current) {
-      rendererARef.current = new VolumeRenderer(
-        containerARef.current, modeSettings.instrument, { ...DEFAULT_CALIBRATION, bgColor },
-      );
-      rendererARef.current.setGridAxesVisible(false);
-      rendererARef.current.setScrollZoom(false);
-      if (isMobile) rendererARef.current.setRotateSpeed(0.3 * mobileSpeedMul);
-    }
+    try {
+      // Mode A — VolumeRenderer + DEFAULT_CALIBRATION
+      // DO NOT call setCameraPreset after construction — constructor already applies orbit from calibration
+      if (containerARef.current && !rendererARef.current) {
+        rendererARef.current = new VolumeRenderer(
+          containerARef.current, modeSettings.instrument, { ...DEFAULT_CALIBRATION, bgColor },
+        );
+        rendererARef.current.setGridAxesVisible(false);
+        rendererARef.current.setScrollZoom(false);
+        if (isMobile) rendererARef.current.setRotateSpeed(0.3 * mobileSpeedMul);
+      }
 
-    // Mode B — VolumeRenderer + DEFAULT_CALIBRATION_B
-    if (containerBRef.current && !rendererBRef.current && hasFrames) {
-      rendererBRef.current = new VolumeRenderer(
-        containerBRef.current, modeSettings.spatial, { ...DEFAULT_CALIBRATION_B, bgColor },
-      );
-      rendererBRef.current.setGridAxesVisible(false);
-      rendererBRef.current.setScrollZoom(false);
-      if (isMobile) rendererBRef.current.setRotateSpeed(0.3 * mobileSpeedMul);
-    }
+      // Mode B — VolumeRenderer + DEFAULT_CALIBRATION_B
+      if (containerBRef.current && !rendererBRef.current && hasFrames) {
+        rendererBRef.current = new VolumeRenderer(
+          containerBRef.current, modeSettings.spatial, { ...DEFAULT_CALIBRATION_B, bgColor },
+        );
+        rendererBRef.current.setGridAxesVisible(false);
+        rendererBRef.current.setScrollZoom(false);
+        if (isMobile) rendererBRef.current.setRotateSpeed(0.3 * mobileSpeedMul);
+      }
 
-    // Mode C — VolumeRendererClassic + DEFAULT_CALIBRATION_C
-    if (containerCRef.current && !rendererCRef.current && hasFrames) {
-      rendererCRef.current = new VolumeRendererClassic(
-        containerCRef.current, modeSettings.classic, { ...DEFAULT_CALIBRATION_C, bgColor },
-      );
-      rendererCRef.current.setGridAxesVisible(false);
-      rendererCRef.current.setScrollZoom(false);
-      if (isMobile) rendererCRef.current.setRotateSpeed(0.3 * mobileSpeedMul);
+      // Mode C — VolumeRendererClassic + DEFAULT_CALIBRATION_C
+      if (containerCRef.current && !rendererCRef.current && hasFrames) {
+        rendererCRef.current = new VolumeRendererClassic(
+          containerCRef.current, modeSettings.classic, { ...DEFAULT_CALIBRATION_C, bgColor },
+        );
+        rendererCRef.current.setGridAxesVisible(false);
+        rendererCRef.current.setScrollZoom(false);
+        if (isMobile) rendererCRef.current.setRotateSpeed(0.3 * mobileSpeedMul);
+      }
+    } catch (err) {
+      console.error('[VolumeViewer] Failed to create WebGL renderers:', err);
     }
 
     return () => {

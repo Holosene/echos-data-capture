@@ -139,6 +139,11 @@ export class VolumeRenderer {
   private gridHelper: THREE.GridHelper;
   private axesHelper: THREE.AxesHelper;
   private resizeObserver: ResizeObserver | null = null;
+  private container: HTMLElement;
+  private contextLost = false;
+  private lastVolumeData: Float32Array | null = null;
+  private lastVolumeDims: [number, number, number] = [1, 1, 1];
+  private lastVolumeExtent: [number, number, number] = [1, 1, 1];
   private _needsRender = true; // dirty flag — only render when something changed
   // Pre-allocated vectors to avoid GC pressure in hot loops
   private _camLocal = new THREE.Vector3();
@@ -164,10 +169,35 @@ export class VolumeRenderer {
       alpha: true,
       powerPreference: 'high-performance',
     });
+    this.container = container;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
+    const w = Math.max(container.clientWidth, 1);
+    const h = Math.max(container.clientHeight, 1);
+    this.renderer.setSize(w, h);
     this.renderer.setClearColor(new THREE.Color(this.calibration.bgColor), 1);
     container.appendChild(this.renderer.domElement);
+
+    // WebGL context loss/restore handlers
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.contextLost = true;
+      cancelAnimationFrame(this.animationId);
+      this.onContextLostCallback?.();
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.contextLost = false;
+      // Re-upload textures (GPU resources were lost)
+      if (this.tfTexture) this.tfTexture.needsUpdate = true;
+      if (this.lastVolumeData) {
+        this.meshCreated = false;
+        this.volumeTexture = null;
+        this.uploadVolume(this.lastVolumeData, this.lastVolumeDims, this.lastVolumeExtent);
+      }
+      this._needsRender = true;
+      this.animate();
+      this.onContextRestoredCallback?.();
+    });
 
     // Scene (no fog — clean rendering)
     this.scene = new THREE.Scene();
@@ -175,7 +205,7 @@ export class VolumeRenderer {
     // Camera
     this.camera = new THREE.PerspectiveCamera(
       this.calibration.camera.fov,
-      container.clientWidth / container.clientHeight,
+      w / h,
       0.1,
       100,
     );
@@ -417,6 +447,13 @@ export class VolumeRenderer {
 
     this.dimensions = dimensions;
     this.extent = extent;
+
+    // Save reference for context restore
+    this.lastVolumeData = data;
+    this.lastVolumeDims = dimensions;
+    this.lastVolumeExtent = extent;
+
+    if (this.contextLost) return;
 
     // FAST PATH: reuse existing texture when dimensions match (avoids GPU alloc/dealloc)
     if (!dimsChanged && this.volumeTexture && this.meshCreated && this.material) {
@@ -763,7 +800,7 @@ void main() {
   // ─── Render loop ──────────────────────────────────────────────────────
 
   private animate = (): void => {
-    if (this.disposed) return;
+    if (this.disposed || this.contextLost) return;
     this.animationId = requestAnimationFrame(this.animate);
 
     // controls.update() returns true when damping moves the camera
