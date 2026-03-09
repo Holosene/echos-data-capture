@@ -35,6 +35,14 @@ export default defineConfig({
     target: 'es2022',
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          leaflet: ['leaflet'],
+        },
+      },
+    },
   },
   worker: {
     format: 'es',

@@ -28,8 +28,7 @@ import { ExportPanel } from './ExportPanel.js';
 import { useTranslation } from '../i18n/index.js';
 import { useTheme } from '../theme/index.js';
 import type { TranslationKey } from '../i18n/translations.js';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import type L_Type from 'leaflet';
 
 interface VolumeViewerProps {
   /** Mode A (Instrument) data — always present */
@@ -187,66 +186,80 @@ const CAMERA_PRESETS: { key: CameraPreset; labelKey: string; Icon: React.FC }[] 
 // ─── Leaflet Map component ─────────────────────────────────────────────────
 function GpsMap({ points, theme }: { points?: Array<{ lat: number; lon: number }>; theme: string }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
+  const mapInstanceRef = useRef<L_Type.Map | null>(null);
+  const leafletRef = useRef<typeof L_Type | null>(null);
 
   const hasPoints = points && points.length >= 2;
 
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
+    let cancelled = false;
 
-    const tileUrl = theme === 'light'
-      ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    // Lazy-load Leaflet + CSS only when the map is actually rendered
+    (async () => {
+      const [L, _css] = await Promise.all([
+        import('leaflet').then(m => m.default),
+        import('leaflet/dist/leaflet.css'),
+      ]);
+      if (cancelled) return;
+      leafletRef.current = L;
 
-    const map = L.map(mapContainerRef.current, {
-      zoomControl: false,
-      attributionControl: false,
-      scrollWheelZoom: false,
-    });
+      const tileUrl = theme === 'light'
+        ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
-    L.control.zoom({ position: 'topright' }).addTo(map);
-    L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
+      const map = L.map(mapContainerRef.current!, {
+        zoomControl: false,
+        attributionControl: false,
+        scrollWheelZoom: false,
+      });
 
-    if (hasPoints) {
-      const latLngs = points.map((p) => L.latLng(p.lat, p.lon));
-      const polyline = L.polyline(latLngs, {
-        color: colors.accent,
-        weight: 3,
-        opacity: 0.8,
-        smoothFactor: 1.5,
-      }).addTo(map);
+      L.control.zoom({ position: 'topright' }).addTo(map);
+      L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
 
-      L.circleMarker(latLngs[0], {
-        radius: 5, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1, weight: 0,
-      }).addTo(map);
+      if (hasPoints) {
+        const latLngs = points!.map((p) => L.latLng(p.lat, p.lon));
+        const polyline = L.polyline(latLngs, {
+          color: colors.accent,
+          weight: 3,
+          opacity: 0.8,
+          smoothFactor: 1.5,
+        }).addTo(map);
 
-      L.circleMarker(latLngs[latLngs.length - 1], {
-        radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 1, weight: 0,
-      }).addTo(map);
+        L.circleMarker(latLngs[0], {
+          radius: 5, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1, weight: 0,
+        }).addTo(map);
 
-      map.fitBounds(polyline.getBounds(), { padding: [20, 20], maxZoom: 19 });
-    } else {
-      // Neutral view — world overview, no markers
-      map.setView([20, 0], 2);
-    }
+        L.circleMarker(latLngs[latLngs.length - 1], {
+          radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 1, weight: 0,
+        }).addTo(map);
 
-    map.on('click', () => map.scrollWheelZoom.enable());
-    map.on('mouseout', () => map.scrollWheelZoom.disable());
+        map.fitBounds(polyline.getBounds(), { padding: [20, 20], maxZoom: 19 });
+      } else {
+        map.setView([20, 0], 2);
+      }
 
-    mapInstanceRef.current = map;
-    const sizeTimer = setTimeout(() => map.invalidateSize(), 200);
+      map.on('click', () => map.scrollWheelZoom.enable());
+      map.on('mouseout', () => map.scrollWheelZoom.disable());
+
+      mapInstanceRef.current = map;
+      setTimeout(() => map.invalidateSize(), 200);
+    })();
 
     return () => {
-      clearTimeout(sizeTimer);
-      map.remove();
-      mapInstanceRef.current = null;
+      cancelled = true;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, [points, theme, hasPoints]);
 
   // Swap tiles on theme change
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map) return;
+    const L = leafletRef.current;
+    if (!map || !L) return;
     map.eachLayer((layer) => {
       if (layer instanceof L.TileLayer) layer.remove();
     });
@@ -1066,8 +1079,11 @@ export function VolumeViewer({
         }
       }
 
-      // Sync React state every frame for smooth slider
-      setCurrentFrame(next);
+      // Throttle React state sync to ~15fps — avoids re-rendering
+      // the entire 1900-line component at 60fps during playback.
+      if (frameCounter % 4 === 0 || next >= framesRef.current!.length - 1) {
+        setCurrentFrame(next);
+      }
     };
 
     rafId = requestAnimationFrame(tick);
@@ -1287,7 +1303,7 @@ export function VolumeViewer({
                       <rect x="14" y="3" width="6" height="18" rx="1.5" />
                     </svg>
                   ) : (
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '2px' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '-1px' }}>
                       <path d="M6 4l15 8-15 8V4z" />
                     </svg>
                   )}
@@ -1604,7 +1620,7 @@ export function VolumeViewer({
               onClick={() => { if (isTemporal && hasFrames) { if (currentFrame >= totalFrames - 1) { currentFrameRef.current = 0; setCurrentFrame(0); } setPlaying((p) => !p); } }}
               style={{ width: '40px', height: '40px', borderRadius: '50%', border: `1.5px solid ${colors.accent}`, background: playing && isTemporal ? colors.accentMuted : colors.surface, color: colors.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
-              {playing && isTemporal ? (<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="3" width="6" height="18" rx="1.5" /><rect x="14" y="3" width="6" height="18" rx="1.5" /></svg>) : (<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '2px' }}><path d="M6 4l15 8-15 8V4z" /></svg>)}
+              {playing && isTemporal ? (<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="3" width="6" height="18" rx="1.5" /><rect x="14" y="3" width="6" height="18" rx="1.5" /></svg>) : (<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '-1px' }}><path d="M6 4l15 8-15 8V4z" /></svg>)}
             </button>
           )}
         </div>
@@ -1682,8 +1698,6 @@ export function VolumeViewer({
           fontSize: '11px',
           lineHeight: 1.6,
         }}>
-          <p style={{ margin: 0 }}>Musique : Teimo (schluss) par Thomas Köner</p>
-          <p style={{ margin: '4px 0 0' }}>Images issues principalement des archives du Schmidt Ocean Institut</p>
         </div>
 
         {/* Bottom actions */}
@@ -1879,8 +1893,6 @@ export function VolumeViewer({
         fontSize: '13px',
         lineHeight: 1.7,
       }}>
-        <p style={{ margin: 0 }}>Musique : Teimo (schluss) par Thomas Köner</p>
-        <p style={{ margin: '4px 0 0' }}>Images issues principalement des archives du Schmidt Ocean Institut</p>
       </div>
 
       {/* Bottom action buttons */}
