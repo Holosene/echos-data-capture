@@ -509,20 +509,65 @@ vec2 intersectBox(vec3 origin, vec3 dir, vec3 bmin, vec3 bmax) {
   return vec2(tNear, tFar);
 }
 
+// Tricubic interpolation (Catmull-Rom)
+float cubicWeight(float x) {
+  float ax = abs(x);
+  if (ax <= 1.0) return (1.5 * ax - 2.5) * ax * ax + 1.0;
+  if (ax < 2.0) return ((-0.5 * ax + 2.5) * ax - 4.0) * ax + 2.0;
+  return 0.0;
+}
+
+float sampleTricubic(vec3 pos) {
+  vec3 texSize = uVolumeSize;
+  vec3 coord = pos * texSize - 0.5;
+  vec3 index = floor(coord);
+  vec3 frac = coord - index;
+
+  float result = 0.0;
+  for (int z = -1; z <= 2; z++) {
+    float wz = cubicWeight(float(z) - frac.z);
+    for (int y = -1; y <= 2; y++) {
+      float wy = cubicWeight(float(y) - frac.y);
+      float wyz = wy * wz;
+      for (int x = -1; x <= 2; x++) {
+        float wx = cubicWeight(float(x) - frac.x);
+        vec3 sampleCoord = (index + vec3(float(x), float(y), float(z)) + 0.5) / texSize;
+        sampleCoord = clamp(sampleCoord, 0.0, 1.0);
+        result += texture(uVolume, sampleCoord).r * wx * wyz;
+      }
+    }
+  }
+  return max(result, 0.0);
+}
+
 float sampleVolume(vec3 pos) {
-  float val = texture(uVolume, pos).r;
-  if (uSmoothing > 0.0) {
-    vec3 ts = 1.0 / uVolumeSize;
-    float avg = 0.0;
-    avg += texture(uVolume, pos + vec3(ts.x, 0, 0)).r;
-    avg += texture(uVolume, pos - vec3(ts.x, 0, 0)).r;
-    avg += texture(uVolume, pos + vec3(0, ts.y, 0)).r;
-    avg += texture(uVolume, pos - vec3(0, ts.y, 0)).r;
-    avg += texture(uVolume, pos + vec3(0, 0, ts.z)).r;
-    avg += texture(uVolume, pos - vec3(0, 0, ts.z)).r;
-    val = mix(val, avg / 6.0, uSmoothing * 0.5);
+  float val;
+  if (uSmoothing > 0.3) {
+    val = sampleTricubic(pos);
+  } else {
+    val = texture(uVolume, pos).r;
+    if (uSmoothing > 0.0) {
+      vec3 ts = 1.0 / uVolumeSize;
+      float avg = 0.0;
+      avg += texture(uVolume, pos + vec3(ts.x, 0, 0)).r;
+      avg += texture(uVolume, pos - vec3(ts.x, 0, 0)).r;
+      avg += texture(uVolume, pos + vec3(0, ts.y, 0)).r;
+      avg += texture(uVolume, pos - vec3(0, ts.y, 0)).r;
+      avg += texture(uVolume, pos + vec3(0, 0, ts.z)).r;
+      avg += texture(uVolume, pos - vec3(0, 0, ts.z)).r;
+      val = mix(val, avg / 6.0, uSmoothing * 0.5);
+    }
   }
   return val;
+}
+
+// Gradient-based lighting
+vec3 computeGradient(vec3 pos) {
+  vec3 ts = 1.5 / uVolumeSize;
+  float dx = texture(uVolume, pos + vec3(ts.x, 0, 0)).r - texture(uVolume, pos - vec3(ts.x, 0, 0)).r;
+  float dy = texture(uVolume, pos + vec3(0, ts.y, 0)).r - texture(uVolume, pos - vec3(0, ts.y, 0)).r;
+  float dz = texture(uVolume, pos + vec3(0, 0, ts.z)).r - texture(uVolume, pos - vec3(0, 0, ts.z)).r;
+  return vec3(dx, dy, dz);
 }
 
 void main() {
@@ -539,6 +584,8 @@ void main() {
   vec4 accum = vec4(0.0);
   float t = tNear;
 
+  vec3 lightDir = normalize(-rayDir);
+
   for (int i = 0; i < 512; i++) {
     if (i >= uStepCount) break;
     if (accum.a >= 0.98) break;
@@ -554,6 +601,19 @@ void main() {
       if (density > uThreshold) {
         float lookupVal = clamp(density, 0.0, 1.0);
         vec4 tfColor = texture(uTransferFunction, vec2(lookupVal, 0.5));
+
+        // Gradient-based shading
+        vec3 grad = computeGradient(uvw);
+        float gradMag = length(grad);
+        if (gradMag > 0.01) {
+          vec3 normal = normalize(grad);
+          float diffuse = max(dot(normal, lightDir), 0.0);
+          vec3 halfVec = normalize(lightDir - rayDir);
+          float specular = pow(max(dot(normal, halfVec), 0.0), 40.0);
+          float shade = mix(1.0, 0.3 + 0.6 * diffuse + 0.25 * specular, min(gradMag * 5.0, 1.0));
+          tfColor.rgb *= shade;
+        }
+
         tfColor.a *= uOpacityScale * stepSize * 100.0;
         tfColor.a = clamp(tfColor.a, 0.0, 1.0);
         tfColor.rgb *= tfColor.a;
