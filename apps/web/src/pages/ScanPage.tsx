@@ -76,6 +76,9 @@ const QUALITY_PRESETS: Record<QualityPreset, QualityConfig> = {
       gamma: 0.9,
       gaussianSigma: 0,
       deblockStrength: 0,
+      claheClipLimit: 0,
+      sharpenAmount: 0,
+      sharpenSigma: 1.5,
     },
   },
   medium: {
@@ -83,10 +86,13 @@ const QUALITY_PRESETS: Record<QualityPreset, QualityConfig> = {
     grid: { resX: 96, resY: 96, resZ: 96 },
     preprocessing: {
       upscaleFactor: 1,
-      denoiseStrength: 0.08,
-      gamma: 0.9,
+      denoiseStrength: 0.12,
+      gamma: 0.85,
       gaussianSigma: 0.2,
       deblockStrength: 0,
+      claheClipLimit: 2.0,
+      sharpenAmount: 0.3,
+      sharpenSigma: 1.5,
     },
   },
   complete: {
