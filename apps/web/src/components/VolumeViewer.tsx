@@ -822,7 +822,7 @@ export function VolumeViewer({
       }
 
       // Mode C — VolumeRendererClassic + DEFAULT_CALIBRATION_C
-      if (containerCRef.current && !rendererCRef.current && hasFrames) {
+      if (containerCRef.current && !rendererCRef.current && (hasFrames || hasVolumeData)) {
         rendererCRef.current = new VolumeRendererClassic(
           containerCRef.current, modeSettings.classic, { ...DEFAULT_CALIBRATION_C, bgColor },
         );
@@ -849,7 +849,7 @@ export function VolumeViewer({
       frameCacheCRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasFrames, hasSpatialData]);
+  }, [hasFrames, hasSpatialData, hasVolumeData]);
 
   // Initialize presentation poses after renderers are created
   useEffect(() => {
@@ -896,6 +896,12 @@ export function VolumeViewer({
     const sExt = spatialExtent ?? extent;
     rendererBRef.current.uploadVolume(spatialData, sDims, sExt);
   }, [spatialData, spatialDimensions, spatialExtent, dimensions, extent, hasFrames]);
+
+  // Upload pre-computed volume data to Mode C (for pre-generated sessions without frames)
+  useEffect(() => {
+    if (!rendererCRef.current || !volumeData || volumeData.length === 0 || hasFrames) return;
+    rendererCRef.current.uploadVolume(volumeData, dimensions, extent);
+  }, [volumeData, dimensions, extent, hasFrames]);
 
   // ─── Mode B + C: frame caches (LRU-bounded) ────────────────────────────
   const MAX_CACHE_ENTRIES = 20;
@@ -1189,8 +1195,9 @@ export function VolumeViewer({
   const currentTimeS = hasFrames && frames!.length > 0 ? frames![currentFrame]?.timeS ?? 0 : 0;
 
   const hasSpatialData = !!(spatialData && spatialData.length > 0);
+  const hasVolumeData = !!(volumeData && volumeData.length > 0);
   const showB = hasFrames || hasSpatialData;
-  const showC = hasFrames && !!beam && !!grid;
+  const showC = (hasFrames || hasVolumeData) && !!beam && !!grid;
 
   // Background matches the renderer scene background for seamless 3D
   const viewportBg = theme === 'light' ? '#f5f5f7' : '#111111';
