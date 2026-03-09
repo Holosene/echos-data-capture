@@ -79,7 +79,7 @@ export function HomePage() {
           <img
             src={getBrandingForTheme(theme).texteTitle}
             alt="ecos"
-            style={{ width: 'clamp(280px, 35vw, 480px)', height: 'auto', display: 'block' }}
+            style={{ width: 'clamp(170px, 22vw, 290px)', height: 'auto', display: 'block' }}
           />
         </div>
 

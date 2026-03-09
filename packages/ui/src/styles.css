@@ -49,7 +49,7 @@
 
   /* Layout gutter system — topbar full-width, content aligned to logo right edge */
   --page-gutter: clamp(16px, 3vw, 40px);
-  --logo-block-w: 140px;
+  --logo-block-w: 84px;
   --content-gutter: calc(var(--page-gutter) + var(--logo-block-w));
 
   /* Topbar gradient — liquid glass */
