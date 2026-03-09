@@ -226,65 +226,69 @@ function Topbar() {
         </div>
       </header>
 
-      {/* Mobile nav drawer + backdrop */}
-      <div
-        className={`mobile-nav-backdrop${mobileMenuOpen ? ' open' : ''}`}
-        onClick={() => setMobileMenuOpen(false)}
-      />
-      <div className={`mobile-nav-drawer${mobileMenuOpen ? ' open' : ''}`}>
-        <div className="mobile-nav-header">
-          <img src={logoSrc} alt="echos" style={{ height: '22px', width: 'auto' }} />
-          <button
+      {/* Mobile nav drawer + backdrop — only rendered when open */}
+      {mobileMenuOpen && (
+        <>
+          <div
+            className="mobile-nav-backdrop open"
             onClick={() => setMobileMenuOpen(false)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '36px', height: '36px', borderRadius: '9999px',
-              border: '1px solid var(--c-border)', background: 'transparent',
-              color: 'var(--c-text-2)', cursor: 'pointer',
-            }}
-            aria-label="Close"
-          >
-            <IconX size={18} />
-          </button>
-        </div>
+          />
+          <div className="mobile-nav-drawer open">
+            <div className="mobile-nav-header">
+              <img src={logoSrc} alt="echos" style={{ height: '22px', width: 'auto' }} />
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '36px', height: '36px', borderRadius: '9999px',
+                  border: '1px solid var(--c-border)', background: 'transparent',
+                  color: 'var(--c-text-2)', cursor: 'pointer',
+                }}
+                aria-label="Close"
+              >
+                <IconX size={18} />
+              </button>
+            </div>
 
-        {navItems.map((item) => (
-          <button
-            key={item.path}
-            className={`mobile-nav-link${isNavActive(item) ? ' active' : ''}`}
-            onClick={() => handleNavClick(item)}
-          >
-            {item.label}
-          </button>
-        ))}
+            {navItems.map((item) => (
+              <button
+                key={item.path}
+                className={`mobile-nav-link${isNavActive(item) ? ' active' : ''}`}
+                onClick={() => handleNavClick(item)}
+              >
+                {item.label}
+              </button>
+            ))}
 
-        <div className="mobile-nav-footer">
-          <button
-            onClick={toggleTheme}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '40px', height: '40px', borderRadius: '9999px',
-              border: '1px solid var(--c-border)', background: 'transparent',
-              color: 'var(--c-text-2)', cursor: 'pointer',
-            }}
-          >
-            {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-          </button>
-          <button
-            onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 16px', borderRadius: '9999px',
-              border: '1px solid var(--c-border)', background: 'transparent',
-              color: 'var(--c-text-2)', fontSize: '14px', fontWeight: 500,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            <IconGlobe size={16} />
-            {lang === 'fr' ? 'EN' : 'FR'}
-          </button>
-        </div>
-      </div>
+            <div className="mobile-nav-footer">
+              <button
+                onClick={toggleTheme}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '40px', height: '40px', borderRadius: '9999px',
+                  border: '1px solid var(--c-border)', background: 'transparent',
+                  color: 'var(--c-text-2)', cursor: 'pointer',
+                }}
+              >
+                {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+              </button>
+              <button
+                onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '8px 16px', borderRadius: '9999px',
+                  border: '1px solid var(--c-border)', background: 'transparent',
+                  color: 'var(--c-text-2)', fontSize: '14px', fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <IconGlobe size={16} />
+                {lang === 'fr' ? 'EN' : 'FR'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
