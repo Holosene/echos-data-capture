@@ -242,20 +242,11 @@ export async function runPipeline(opts: {
   );
   worker = w;
 
-  // Mobile detection
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
-  const pipelineGrid = isMobile
-    ? { resX: Math.min(grid.resX, 64), resY: Math.min(grid.resY, 64), resZ: Math.min(grid.resZ, 64) }
-    : grid;
-  const pipelinePreprocessing = isMobile
-    ? { ...preprocessing, denoiseStrength: 0, gaussianSigma: 0, deblockStrength: 0 }
-    : preprocessing;
-
   w.postMessage({
     type: 'init',
-    preprocessing: pipelinePreprocessing,
+    preprocessing,
     beam,
-    grid: pipelineGrid,
+    grid,
   });
 
   let extractionDone = false;
@@ -292,12 +283,7 @@ export async function runPipeline(opts: {
   });
 
   // Parallel frame extraction
-  const PARALLEL = isMobile
-    ? Math.min(2, navigator.hardwareConcurrency || 2)
-    : Math.min(6, Math.max(2, navigator.hardwareConcurrency || 4));
-  const mobileScale = isMobile ? 0.5 : 1;
-  const bitmapW = Math.round(crop.width * mobileScale);
-  const bitmapH = Math.round(crop.height * mobileScale);
+  const PARALLEL = Math.min(6, Math.max(2, navigator.hardwareConcurrency || 4));
   const chunkSize = Math.ceil(totalFrames / PARALLEL);
   let extractedCount = 0;
 
@@ -309,7 +295,6 @@ export async function runPipeline(opts: {
       await new Promise<void>((r) => { videoEl.onseeked = () => r(); });
       const bitmap = await createImageBitmap(
         videoEl, crop.x, crop.y, crop.width, crop.height,
-        mobileScale < 1 ? { resizeWidth: bitmapW, resizeHeight: bitmapH, resizeQuality: 'low' } : undefined as any,
       );
       w.postMessage({ type: 'frame', index: i, timeS, bitmap }, [bitmap]);
       extractedCount++;
