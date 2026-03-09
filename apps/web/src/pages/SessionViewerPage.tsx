@@ -2,15 +2,10 @@
  * ECOS — Session Viewer Page
  *
  * Loads a pre-generated session from the manifest and displays
- * the volume viewer without requiring the full processing pipeline.
+ * the volume viewer — identical layout to the ScanPage viewer phase,
+ * with a slim top bar showing back button + "pré-généré" badge.
  *
  * Route: /session/:sessionId
- *
- * Flow:
- *   1. Read sessionId from URL params
- *   2. Look up manifest entry for volume file paths
- *   3. Lazy-fetch the .echos-vol binary on demand
- *   4. Deserialize → display in VolumeViewer
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -63,7 +58,6 @@ export default function SessionViewerPage() {
 
     try {
       // ── Try IndexedDB first ──
-      let loadedFromIDB = false;
       try {
         const idbBuffer = await loadVolumeFromIDB(sessionId, 'instrument');
         if (idbBuffer) {
@@ -72,9 +66,7 @@ export default function SessionViewerPage() {
           setInstrumentDims(snap.dimensions);
           setInstrumentExtent(snap.extent);
           setProgress(50);
-          loadedFromIDB = true;
 
-          // Also try spatial from IDB
           const idbSpatial = await loadVolumeFromIDB(sessionId, 'spatial');
           if (idbSpatial) {
             const snapS = deserializeVolume(idbSpatial);
@@ -218,16 +210,17 @@ export default function SessionViewerPage() {
       }
     : undefined;
 
-  // Ready — render VolumeViewer
+  // Ready — render exactly like ScanPage viewer phase
   return (
-    <div style={{ background: colors.black, minHeight: 'calc(100vh - 72px)' }}>
-      {/* Session header bar */}
+    <div style={{ background: colors.black, minHeight: 'calc(100vh - 72px)', display: 'flex', flexDirection: 'column' }}>
+      {/* Slim top bar — matches ScanPage publish bar layout */}
       <div style={{
-        padding: '12px var(--content-gutter)',
         display: 'flex',
         alignItems: 'center',
-        gap: '16px',
+        gap: '12px',
+        padding: '10px 16px',
         borderBottom: `1px solid ${colors.border}`,
+        flexShrink: 0,
       }}>
         <button
           onClick={() => navigate('/')}
@@ -240,39 +233,28 @@ export default function SessionViewerPage() {
             fontSize: '13px',
             cursor: 'pointer',
             fontFamily: 'inherit',
+            transition: 'all 150ms ease',
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = colors.accent; e.currentTarget.style.color = colors.accent; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.text2; }}
         >
           &larr; Retour
         </button>
-        <div style={{ flex: 1 }}>
-          <span style={{
-            fontFamily: fonts.display,
-            fontVariationSettings: "'wght' 600",
-            fontSize: '16px',
-            color: colors.text1,
-          }}>
-            {entry?.name ?? sessionId}
-          </span>
-          {session && (
-            <span style={{ marginLeft: '12px', fontSize: '12px', color: colors.text3 }}>
-              {session.totalDistanceM.toFixed(0)}m &bull; {(session.durationS / 60).toFixed(1)}min &bull;
-              {session.gridDimensions[0]}×{session.gridDimensions[1]}×{session.gridDimensions[2]}
-            </span>
-          )}
-        </div>
+        <div style={{ flex: 1 }} />
         <span style={{
-          padding: '4px 10px',
+          padding: '5px 14px',
           borderRadius: '9999px',
           background: colors.accentMuted,
           color: colors.accent,
-          fontSize: '11px',
-          fontWeight: 500,
+          fontSize: '12px',
+          fontWeight: 600,
+          letterSpacing: '0.02em',
         }}>
           pré-généré
         </span>
       </div>
 
-      {/* Volume viewer */}
+      {/* Volume viewer — identical component as ScanPage */}
       <VolumeViewer
         volumeData={instrumentData}
         dimensions={instrumentDims}
@@ -281,10 +263,11 @@ export default function SessionViewerPage() {
         spatialDimensions={spatialDims}
         spatialExtent={spatialExtent}
         gpxTrack={gpxTrackObj}
-        videoFileName={entry?.videoFileName}
+        videoFileName={entry?.videoFileName ?? entry?.name}
         gpxFileName={entry?.gpxFileName}
         beam={entry?.beam}
         grid={entry ? { resX: entry.gridDimensions[0], resY: entry.gridDimensions[1], resZ: entry.gridDimensions[2] } : undefined}
+        videoDurationS={session ? session.durationS : undefined}
         onNewScan={() => navigate('/scan')}
       />
     </div>

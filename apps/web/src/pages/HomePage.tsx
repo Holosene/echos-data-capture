@@ -405,104 +405,123 @@ export function HomePage() {
               <div className="map-info-panel" style={{
                 flex: '0 0 75%',
                 height: '100%',
-                padding: '40px',
+                padding: '0',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center',
-                gap: '24px',
                 background: colors.surface,
                 borderLeft: `1px solid ${colors.border}`,
                 animation: 'echos-fade-in 300ms ease',
+                position: 'relative',
+                overflow: 'hidden',
               }}>
-                {/* Close button */}
+                {/* Close button — top right, well positioned */}
                 <button
                   onClick={() => setFocusedSessionId(null)}
                   style={{
                     position: 'absolute',
-                    top: '16px',
-                    right: '16px',
-                    width: '36px',
-                    height: '36px',
+                    top: '12px',
+                    right: '12px',
+                    width: '32px',
+                    height: '32px',
                     borderRadius: '50%',
                     border: `1px solid ${colors.border}`,
-                    background: colors.surface,
+                    background: colors.black,
                     color: colors.text2,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     zIndex: 5,
+                    transition: 'all 150ms ease',
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = colors.accent; e.currentTarget.style.color = colors.accent; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = colors.border; e.currentTarget.style.color = colors.text2; }}
                 >
                   ×
                 </button>
 
-                <div>
-                  <h3 style={{
-                    fontFamily: fonts.display,
-                    fontVariationSettings: "'wght' 600",
-                    fontSize: 'clamp(24px, 2.5vw, 36px)',
-                    color: colors.text1,
-                    lineHeight: 1.1,
-                    letterSpacing: '-0.02em',
-                    marginBottom: '8px',
+                {/* Content area — vertically centered */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(20px, 3vw, 40px) clamp(24px, 3vw, 48px)', gap: '20px' }}>
+                  {/* Title + date */}
+                  <div>
+                    <h3 style={{
+                      fontFamily: fonts.display,
+                      fontVariationSettings: "'wght' 600",
+                      fontSize: 'clamp(18px, 2vw, 28px)',
+                      color: colors.text1,
+                      lineHeight: 1.1,
+                      letterSpacing: '-0.02em',
+                      marginBottom: '6px',
+                      paddingRight: '40px',
+                    }}>
+                      {session.name}
+                    </h3>
+                    <p style={{ fontSize: '13px', color: colors.text3 }}>
+                      {new Date(session.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="map-info-stats" style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '10px',
                   }}>
-                    {session.name}
-                  </h3>
-                  <p style={{ fontSize: '14px', color: colors.text3 }}>
-                    {new Date(session.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </p>
-                </div>
+                    {[
+                      { value: `${session.totalDistanceM.toFixed(0)}m`, label: 'Distance' },
+                      { value: `${(session.durationS / 60).toFixed(1)}min`, label: 'Durée' },
+                      { value: `${session.frameCount}`, label: 'Frames' },
+                    ].map((stat) => (
+                      <div key={stat.label} style={{
+                        padding: 'clamp(10px, 1.2vw, 16px)',
+                        borderRadius: '10px',
+                        background: colors.black,
+                        border: `1px solid ${colors.border}`,
+                      }}>
+                        <div style={{
+                          fontSize: 'clamp(16px, 1.8vw, 22px)',
+                          fontWeight: 600,
+                          color: colors.accent,
+                          fontVariantNumeric: 'tabular-nums',
+                          lineHeight: 1.2,
+                        }}>
+                          {stat.value}
+                        </div>
+                        <div style={{ fontSize: '11px', color: colors.text3, marginTop: '3px' }}>{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
 
-                <div className="map-info-stats" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '16px',
-                }}>
-                  <div style={{ padding: '16px', borderRadius: '12px', background: colors.black, border: `1px solid ${colors.border}` }}>
-                    <div style={{ fontSize: '22px', fontWeight: 600, color: colors.accent, fontVariantNumeric: 'tabular-nums' }}>
-                      {session.totalDistanceM.toFixed(0)}m
-                    </div>
-                    <div style={{ fontSize: '12px', color: colors.text3, marginTop: '4px' }}>Distance</div>
-                  </div>
-                  <div style={{ padding: '16px', borderRadius: '12px', background: colors.black, border: `1px solid ${colors.border}` }}>
-                    <div style={{ fontSize: '22px', fontWeight: 600, color: colors.accent, fontVariantNumeric: 'tabular-nums' }}>
-                      {(session.durationS / 60).toFixed(1)}min
-                    </div>
-                    <div style={{ fontSize: '12px', color: colors.text3, marginTop: '4px' }}>Durée</div>
-                  </div>
-                  <div style={{ padding: '16px', borderRadius: '12px', background: colors.black, border: `1px solid ${colors.border}` }}>
-                    <div style={{ fontSize: '22px', fontWeight: 600, color: colors.accent, fontVariantNumeric: 'tabular-nums' }}>
-                      {session.frameCount}
-                    </div>
-                    <div style={{ fontSize: '12px', color: colors.text3, marginTop: '4px' }}>Frames</div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '13px', color: colors.text2 }}>
-                  <span style={{ padding: '4px 12px', borderRadius: '9999px', background: colors.accentMuted, color: colors.accent, fontSize: '12px', fontWeight: 500 }}>
-                    {session.videoFileName}
-                  </span>
-                  {session.gpxFileName && (
-                    <span style={{ padding: '4px 12px', borderRadius: '9999px', background: colors.accentMuted, color: colors.accent, fontSize: '12px', fontWeight: 500 }}>
-                      {session.gpxFileName}
+                  {/* Tags */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ padding: '4px 12px', borderRadius: '9999px', background: colors.accentMuted, color: colors.accent, fontSize: '11px', fontWeight: 500, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {session.videoFileName}
                     </span>
+                    {session.gpxFileName && (
+                      <span style={{ padding: '4px 12px', borderRadius: '9999px', background: colors.accentMuted, color: colors.accent, fontSize: '11px', fontWeight: 500, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {session.gpxFileName}
+                      </span>
+                    )}
+                    <span style={{ padding: '4px 12px', borderRadius: '9999px', background: colors.accentMuted, color: colors.accent, fontSize: '11px', fontWeight: 500 }}>
+                      {session.gridDimensions[0]}×{session.gridDimensions[1]}×{session.gridDimensions[2]}
+                    </span>
+                  </div>
+
+                  {/* Coordinates */}
+                  {session.bounds && (
+                    <p style={{ fontSize: '12px', color: colors.text3, fontVariantNumeric: 'tabular-nums', margin: 0 }}>
+                      {((session.bounds[0] + session.bounds[2]) / 2).toFixed(5)}°N, {((session.bounds[1] + session.bounds[3]) / 2).toFixed(5)}°E
+                    </p>
                   )}
-                  <span style={{ padding: '4px 12px', borderRadius: '9999px', background: colors.accentMuted, color: colors.accent, fontSize: '12px', fontWeight: 500 }}>
-                    {session.gridDimensions[0]}×{session.gridDimensions[1]}×{session.gridDimensions[2]}
-                  </span>
+
+                  {/* Explorer button — refined, not full width */}
+                  <Button variant="primary" size="lg" onClick={() => navigate(`/session/${session.id}`)}
+                    style={{ alignSelf: 'stretch' }}
+                  >
+                    Explorer
+                  </Button>
                 </div>
-
-                {session.bounds && (
-                  <p style={{ fontSize: '13px', color: colors.text3, fontVariantNumeric: 'tabular-nums' }}>
-                    {((session.bounds[0] + session.bounds[2]) / 2).toFixed(5)}°N, {((session.bounds[1] + session.bounds[3]) / 2).toFixed(5)}°E
-                  </p>
-                )}
-
-                <Button variant="primary" size="lg" onClick={() => navigate(`/session/${session.id}`)}>
-                  Explorer
-                </Button>
               </div>
             );
           })()}
