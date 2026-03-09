@@ -148,7 +148,7 @@ function Topbar() {
             textDecoration: 'none',
           }}
         >
-          <img src={logoSrc} alt="echos" style={{ height: '17px', width: 'auto', pointerEvents: 'none' }} />
+          <img src={logoSrc} alt="echos" style={{ height: '28px', width: 'auto', pointerEvents: 'none' }} />
         </a>
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: '0', marginLeft: '40px' }} className="topbar-nav">
@@ -235,7 +235,7 @@ function Topbar() {
           />
           <div className="mobile-nav-drawer open">
             <div className="mobile-nav-header">
-              <img src={logoSrc} alt="echos" style={{ height: '14px', width: 'auto' }} />
+              <img src={logoSrc} alt="echos" style={{ height: '22px', width: 'auto' }} />
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 style={{

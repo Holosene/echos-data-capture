@@ -11,7 +11,7 @@ interface LogoProps {
 /**
  * Logo component - renders theme-aware logotype from branding assets.
  */
-export function Logo({ height = 19, onClick, style }: LogoProps) {
+export function Logo({ height = 32, onClick, style }: LogoProps) {
   const { theme } = useTheme();
   const src = getBrandingForTheme(theme).logotype;
 
