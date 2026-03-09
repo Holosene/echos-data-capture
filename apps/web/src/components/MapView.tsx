@@ -21,6 +21,10 @@ interface MapViewProps {
   theme?: string;
   /** When true, zoom very deep on the selected session */
   deepFocus?: boolean;
+  /** Base path for static assets (thumbnails) */
+  basePath?: string;
+  /** Manifest entries for thumbnail URLs */
+  manifestEntries?: Array<{ id: string; files: { thumbnail?: string } }>;
 }
 
 export function MapView({
@@ -30,11 +34,14 @@ export function MapView({
   gpxTracks,
   theme,
   deepFocus,
+  basePath,
+  manifestEntries,
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layersRef = useRef<Map<string, L.Polyline>>(new Map());
+  const hitLayersRef = useRef<L.Polyline[]>([]);
   const { t } = useTranslation();
   const [showTouchHint, setShowTouchHint] = useState(false);
   const touchHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -97,6 +104,8 @@ export function MapView({
     // Clear old layers
     layersRef.current.forEach((layer) => layer.remove());
     layersRef.current.clear();
+    hitLayersRef.current.forEach((layer) => layer.remove());
+    hitLayersRef.current = [];
 
     const bounds = L.latLngBounds([]);
 
@@ -119,7 +128,8 @@ export function MapView({
             .addTo(map)
             .on('click', () => onSessionSelect(session.id));
 
-          marker.bindPopup(createPopupContent(session));
+          const thumbUrl = getThumbnailUrl(session.id, basePath, manifestEntries);
+          marker.bindPopup(createPopupContent(session, thumbUrl));
         }
         return;
       }
@@ -128,23 +138,38 @@ export function MapView({
       latLngs.forEach((ll) => bounds.extend(ll));
 
       const isSelected = session.id === selectedSessionId;
-      const polyline = L.polyline(latLngs, {
-        color: isSelected ? '#4488ff' : '#8866ff',
-        weight: isSelected ? 4 : 2,
-        opacity: isSelected ? 1.0 : 0.6,
+
+      // Invisible wide polyline for easier clicking (hitbox)
+      const hitArea = L.polyline(latLngs, {
+        color: 'transparent',
+        weight: 24,
+        opacity: 0,
         smoothFactor: 1.5,
       })
         .addTo(map)
         .on('click', () => onSessionSelect(session.id));
 
-      polyline.bindPopup(createPopupContent(session));
+      // Visible polyline
+      const polyline = L.polyline(latLngs, {
+        color: isSelected ? '#4488ff' : '#8866ff',
+        weight: isSelected ? 5 : 3,
+        opacity: isSelected ? 1.0 : 0.7,
+        smoothFactor: 1.5,
+      })
+        .addTo(map)
+        .on('click', () => onSessionSelect(session.id));
+
+      const thumbnailUrl = getThumbnailUrl(session.id, basePath, manifestEntries);
+      polyline.bindPopup(createPopupContent(session, thumbnailUrl));
+      hitArea.bindPopup(createPopupContent(session, thumbnailUrl));
+      hitLayersRef.current.push(hitArea);
       layersRef.current.set(session.id, polyline);
     });
 
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+      map.fitBounds(bounds, { padding: [20, 20], maxZoom: 18 });
     }
-  }, [sessions, selectedSessionId, gpxTracks, onSessionSelect]);
+  }, [sessions, selectedSessionId, gpxTracks, onSessionSelect, basePath, manifestEntries]);
 
   // Deep focus zoom when a session is selected and deepFocus is true
   useEffect(() => {
@@ -267,9 +292,24 @@ export function MapView({
   );
 }
 
-function createPopupContent(session: RecordingSession): string {
+function getThumbnailUrl(
+  sessionId: string,
+  basePath?: string,
+  manifestEntries?: Array<{ id: string; files: { thumbnail?: string } }>,
+): string | null {
+  if (!basePath || !manifestEntries) return null;
+  const entry = manifestEntries.find((e) => e.id === sessionId);
+  if (!entry?.files.thumbnail) return null;
+  return `${basePath}sessions/${sessionId}/${entry.files.thumbnail}`;
+}
+
+function createPopupContent(session: RecordingSession, thumbnailUrl?: string | null): string {
+  const thumbHtml = thumbnailUrl
+    ? `<img src="${escapeHtml(thumbnailUrl)}" alt="" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:8px;background:#111;" onerror="this.style.display='none'" />`
+    : '';
   return `
-    <div style="font-family: Inter, sans-serif; font-size: 13px; min-width: 180px;">
+    <div style="font-family: Inter, sans-serif; font-size: 13px; min-width: 200px; max-width: 260px;">
+      ${thumbHtml}
       <strong style="font-size: 14px;">${escapeHtml(session.name)}</strong>
       <div style="margin-top: 6px; color: #888;">
         ${session.totalDistanceM.toFixed(0)} m &bull;

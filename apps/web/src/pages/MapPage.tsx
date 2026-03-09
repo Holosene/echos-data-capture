@@ -49,6 +49,8 @@ export function MapPage() {
             onSessionSelect={handleSessionSelect}
             gpxTracks={state.gpxTracks}
             theme={theme}
+            basePath={import.meta.env.BASE_URL ?? '/ecos-data-captured/'}
+            manifestEntries={state.manifestEntries}
           />
 
           {/* Session list */}

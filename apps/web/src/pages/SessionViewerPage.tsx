@@ -269,6 +269,7 @@ export default function SessionViewerPage() {
         grid={entry ? { resX: entry.gridDimensions[0], resY: entry.gridDimensions[1], resZ: entry.gridDimensions[2] } : undefined}
         videoDurationS={session ? session.durationS : undefined}
         onNewScan={() => navigate('/scan')}
+        onClose={() => navigate('/')}
       />
     </div>
   );

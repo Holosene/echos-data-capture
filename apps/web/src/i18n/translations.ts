@@ -370,6 +370,7 @@ export const translations = {
     'common.themeLight': 'Mode clair',
     'common.themeDark': 'Mode sombre',
     'common.poster': 'Poster',
+    'common.close': 'Fermer',
   },
 
   en: {
@@ -741,6 +742,7 @@ export const translations = {
     'common.themeLight': 'Light mode',
     'common.themeDark': 'Dark mode',
     'common.poster': 'Poster',
+    'common.close': 'Close',
   },
 } as const;
 
