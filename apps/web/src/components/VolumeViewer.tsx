@@ -25,6 +25,7 @@ import { CalibrationPanel } from './CalibrationPanel.js';
 import { getChromaticModes, CHROMATIC_LABELS } from '../engine/transfer-function.js';
 import { SlicePanel } from './SlicePanel.js';
 import { ExportPanel } from './ExportPanel.js';
+import { downloadStandaloneHTML } from '../export/export-standalone-html.js';
 import { useTranslation } from '../i18n/index.js';
 import { useTheme } from '../theme/index.js';
 import type { TranslationKey } from '../i18n/translations.js';
@@ -2026,6 +2027,22 @@ export function VolumeViewer({
         dimensions={sliceDimensions}
         extent={extent}
         onCaptureScreenshot={handleCaptureScreenshot}
+        onExportHTML={() => {
+          if (!volumeData) return;
+          downloadStandaloneHTML({
+            sessionName: videoFileName || 'session',
+            instrument: { data: volumeData, dimensions, extent },
+            spatial: spatialData && spatialDimensions && spatialExtent
+              ? { data: spatialData, dimensions: spatialDimensions, extent: spatialExtent }
+              : null,
+            classic: classicData && classicDimensions && classicExtent
+              ? { data: classicData, dimensions: classicDimensions, extent: classicExtent }
+              : null,
+            gpxPoints: gpxTrack?.points,
+            durationS: videoDurationS,
+            frameCount: frames?.length,
+          });
+        }}
       />
 
       {/* Credits */}

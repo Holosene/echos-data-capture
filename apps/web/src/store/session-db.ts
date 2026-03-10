@@ -11,7 +11,7 @@
  */
 
 import type { SessionManifestEntry } from '@echos/core';
-import { serializeVolume } from '@echos/core';
+import { serializeVolumeV1 } from '@echos/core';
 import type { VolumeSnapshot } from '@echos/core';
 
 const DB_NAME = 'echos-sessions';
@@ -94,6 +94,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
   // Delete associated volumes
   tx.objectStore(STORE_VOLUMES).delete(`${sessionId}/instrument`);
   tx.objectStore(STORE_VOLUMES).delete(`${sessionId}/spatial`);
+  tx.objectStore(STORE_VOLUMES).delete(`${sessionId}/classic`);
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
@@ -102,14 +103,14 @@ export async function deleteSession(sessionId: string): Promise<void> {
 
 // ─── Volume storage ─────────────────────────────────────────────────────────
 
-/** Save a volume binary for a session. */
+/** Save a volume binary for a session. Uses V1 (uncompressed) for IDB speed. */
 export async function saveVolume(
   sessionId: string,
-  type: 'instrument' | 'spatial',
+  type: 'instrument' | 'spatial' | 'classic',
   snapshot: VolumeSnapshot,
 ): Promise<void> {
   const db = await openDB();
-  const buffer = serializeVolume(snapshot);
+  const buffer = serializeVolumeV1(snapshot);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_VOLUMES, 'readwrite');
     tx.objectStore(STORE_VOLUMES).put(buffer, `${sessionId}/${type}`);
@@ -121,7 +122,7 @@ export async function saveVolume(
 /** Load a volume binary. Returns null if not found. */
 export async function loadVolume(
   sessionId: string,
-  type: 'instrument' | 'spatial',
+  type: 'instrument' | 'spatial' | 'classic',
 ): Promise<ArrayBuffer | null> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
