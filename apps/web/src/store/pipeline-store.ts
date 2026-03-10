@@ -46,6 +46,75 @@ function buildSpatialVolumeFromFrames(
   return { data, dimensions: [dimX, dimY, dimZ], extent: [aspect, 0.5, 1] };
 }
 
+/**
+ * Downsample a volume to target dimensions using trilinear interpolation.
+ * Keeps file sizes manageable (e.g. 128³ ≈ 8 MB instead of 1.9 GB).
+ */
+function downsampleVolume(
+  data: Float32Array,
+  dims: [number, number, number],
+  extent: [number, number, number],
+  targetMax: number,
+): { data: Float32Array; dimensions: [number, number, number]; extent: [number, number, number] } {
+  const [sX, sY, sZ] = dims;
+  // If already small enough, return as-is
+  if (sX <= targetMax && sY <= targetMax && sZ <= targetMax) {
+    return { data, dimensions: dims, extent };
+  }
+
+  // Scale uniformly so the largest dim = targetMax
+  const maxDim = Math.max(sX, sY, sZ);
+  const scale = targetMax / maxDim;
+  const tX = Math.max(1, Math.round(sX * scale));
+  const tY = Math.max(1, Math.round(sY * scale));
+  const tZ = Math.max(1, Math.round(sZ * scale));
+
+  const out = new Float32Array(tX * tY * tZ);
+  const tStrideZ = tY * tX;
+
+  for (let tz = 0; tz < tZ; tz++) {
+    const sz = (tz / (tZ - 1 || 1)) * (sZ - 1);
+    const sz0 = Math.floor(sz);
+    const sz1 = Math.min(sz0 + 1, sZ - 1);
+    const fz = sz - sz0;
+    for (let ty = 0; ty < tY; ty++) {
+      const sy = (ty / (tY - 1 || 1)) * (sY - 1);
+      const sy0 = Math.floor(sy);
+      const sy1 = Math.min(sy0 + 1, sY - 1);
+      const fy = sy - sy0;
+      for (let tx = 0; tx < tX; tx++) {
+        const sx = (tx / (tX - 1 || 1)) * (sX - 1);
+        const sx0 = Math.floor(sx);
+        const sx1 = Math.min(sx0 + 1, sX - 1);
+        const fx = sx - sx0;
+
+        // Trilinear interpolation
+        const sStrideZ = sY * sX;
+        const c000 = data[sz0 * sStrideZ + sy0 * sX + sx0];
+        const c100 = data[sz0 * sStrideZ + sy0 * sX + sx1];
+        const c010 = data[sz0 * sStrideZ + sy1 * sX + sx0];
+        const c110 = data[sz0 * sStrideZ + sy1 * sX + sx1];
+        const c001 = data[sz1 * sStrideZ + sy0 * sX + sx0];
+        const c101 = data[sz1 * sStrideZ + sy0 * sX + sx1];
+        const c011 = data[sz1 * sStrideZ + sy1 * sX + sx0];
+        const c111 = data[sz1 * sStrideZ + sy1 * sX + sx1];
+
+        const c00 = c000 * (1 - fx) + c100 * fx;
+        const c10 = c010 * (1 - fx) + c110 * fx;
+        const c01 = c001 * (1 - fx) + c101 * fx;
+        const c11 = c011 * (1 - fx) + c111 * fx;
+        const c0 = c00 * (1 - fy) + c10 * fy;
+        const c1 = c01 * (1 - fy) + c11 * fy;
+        const val = c0 * (1 - fz) + c1 * fz;
+
+        out[tz * tStrideZ + ty * tX + tx] = val;
+      }
+    }
+  }
+
+  return { data: out, dimensions: [tX, tY, tZ], extent };
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface PipelineResult {
@@ -147,8 +216,11 @@ export async function publishToRepo(): Promise<void> {
   const r = state.result;
   if (!r) throw new Error('No pipeline result to publish');
 
-  // Build spatial volume from frames
-  const spatialVol = buildSpatialVolumeFromFrames(r.instrumentFrames);
+  // Build spatial volume from frames, downsampled to max 128 per axis (~8 MB)
+  const spatialRaw = buildSpatialVolumeFromFrames(r.instrumentFrames);
+  const spatialVol = spatialRaw
+    ? downsampleVolume(spatialRaw.data, spatialRaw.dimensions, spatialRaw.extent, 128)
+    : null;
 
   const manifest: SessionManifestEntry = {
     id: r.sessionId,
@@ -452,8 +524,11 @@ export async function runPipeline(opts: {
         extent,
       });
 
-      // Build and save spatial volume (stacked frames) for Mode B + slices
-      const spatialVol = buildSpatialVolumeFromFrames(preprocessedFrames);
+      // Build and save spatial volume (stacked frames, downsampled to 128³ max)
+      const spatialRaw = buildSpatialVolumeFromFrames(preprocessedFrames);
+      const spatialVol = spatialRaw
+        ? downsampleVolume(spatialRaw.data, spatialRaw.dimensions, spatialRaw.extent, 128)
+        : null;
       if (spatialVol) {
         await saveVolume(sessionId, 'spatial', {
           data: spatialVol.data,
