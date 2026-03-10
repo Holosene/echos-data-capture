@@ -61,6 +61,40 @@ interface VolumeViewerProps {
 
 const WINDOW_SIZE = 12;
 
+// ─── Extract a WINDOW_SIZE window from pre-computed spatial volume (Y axis) ──
+// Used by session viewer to replicate ScanPage's Mode B 12-frame window view.
+function extractSpatialWindow(
+  data: Float32Array,
+  dims: [number, number, number],
+  centerY: number,
+  windowSize: number,
+): { data: Float32Array; dimensions: [number, number, number]; extent: [number, number, number] } {
+  const [dimX, dimY, dimZ] = dims;
+  const half = Math.floor(windowSize / 2);
+  const start = Math.max(0, Math.min(centerY - half, dimY - windowSize));
+  const end = Math.min(dimY, start + windowSize);
+  const count = end - start;
+
+  if (count <= 0 || dimX === 0 || dimZ === 0) {
+    return { data: new Float32Array(1), dimensions: [1, 1, 1], extent: [1, 1, 1] };
+  }
+
+  const windowData = new Float32Array(dimX * count * dimZ);
+  const srcStride = dimY * dimX;
+  const dstStride = count * dimX;
+
+  for (let z = 0; z < dimZ; z++) {
+    for (let y = 0; y < count; y++) {
+      const srcOff = z * srcStride + (start + y) * dimX;
+      const dstOff = z * dstStride + y * dimX;
+      windowData.set(data.subarray(srcOff, srcOff + dimX), dstOff);
+    }
+  }
+
+  const aspect = dimX / dimZ;
+  return { data: windowData, dimensions: [dimX, count, dimZ], extent: [aspect, 0.5, 1] };
+}
+
 // ─── Build v1-style stacked volume from raw preprocessed frames ──────────
 function buildSliceVolumeFromFrames(
   frameList: PreprocessedFrame[],
@@ -746,6 +780,10 @@ export function VolumeViewer({
   const hasSpatialData = !!(spatialData && spatialData.length > 0);
   const hasVolumeData = !!(volumeData && volumeData.length > 0);
   const hasClassicData = !!(classicData && classicData.length > 0);
+  // Spatial scrub: allow slider/play on Mode B by extracting windows from spatial volume
+  const spatialScrubDims = (!hasFrames && hasSpatialData && spatialDimensions) ? spatialDimensions : null;
+  const spatialFrameCount = spatialScrubDims ? spatialScrubDims[1] : 0;
+  const hasSpatialScrub = spatialFrameCount > WINDOW_SIZE;
   const [currentFrame, setCurrentFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(20);
@@ -874,16 +912,24 @@ export function VolumeViewer({
   }, [volumeData, dimensions, extent]);
 
   // Upload pre-computed spatial data to Mode B (for pre-generated sessions without frames)
+  // With spatial scrub: extract a WINDOW_SIZE window to match ScanPage's default view
   useEffect(() => {
     if (!rendererBRef.current || !spatialData || spatialData.length === 0 || hasFrames) return;
     try {
       const sDims = spatialDimensions ?? dimensions;
-      const sExt = spatialExtent ?? extent;
-      rendererBRef.current.uploadVolume(spatialData, sDims, sExt);
+      if (hasSpatialScrub) {
+        // Extract initial 12-frame window (same as ScanPage Mode B default)
+        const win = extractSpatialWindow(spatialData, sDims, currentFrame, WINDOW_SIZE);
+        rendererBRef.current.uploadVolume(win.data, win.dimensions, win.extent);
+      } else {
+        const sExt = spatialExtent ?? extent;
+        rendererBRef.current.uploadVolume(spatialData, sDims, sExt);
+      }
     } catch (err) {
       console.error('[VolumeViewer] Mode B upload error:', err);
     }
-  }, [spatialData, spatialDimensions, spatialExtent, dimensions, extent, hasFrames]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spatialData, spatialDimensions, spatialExtent, dimensions, extent, hasFrames, hasSpatialScrub]);
 
   // Upload pre-computed volume data to Mode C (for pre-generated sessions without frames)
   // Prefer classicData (proper cone projection) over volumeData (instrument volume)
@@ -1059,9 +1105,16 @@ export function VolumeViewer({
   // Upload when currentFrame changes (slider interaction or initial load).
   // Skip during playback — the RAF loop uploads directly.
   useEffect(() => {
-    if (!hasFrames || playing) return;
-    uploadFrameToRenderers(currentFrame);
-  }, [currentFrame, hasFrames, playing, uploadFrameToRenderers]);
+    if (playing) return;
+    if (hasFrames) {
+      uploadFrameToRenderers(currentFrame);
+    } else if (hasSpatialScrub && rendererBRef.current && spatialData) {
+      // Spatial scrub: extract window from spatial volume for Mode B
+      const sDims = spatialDimensions ?? dimensions;
+      const win = extractSpatialWindow(spatialData, sDims, currentFrame, WINDOW_SIZE);
+      rendererBRef.current.uploadVolume(win.data, win.dimensions, win.extent);
+    }
+  }, [currentFrame, hasFrames, playing, uploadFrameToRenderers, hasSpatialScrub, spatialData, spatialDimensions, dimensions]);
 
   // Slice data — prefer frame-stacked volume, then spatialData (highest res stacked frames), then instrument
   // spatialData is the downsampled frame-stack (same structure as fullSliceVolume, just lower res)
@@ -1084,8 +1137,13 @@ export function VolumeViewer({
   // Frame timing is controlled by playSpeed (elapsed time gating).
   // Mode B is updated every frame; Mode C is throttled to every Nth frame.
   // React state syncs every frame for smooth slider tracking.
+  //
+  // Also supports spatial scrub: when no frames but spatialData exists,
+  // extracts WINDOW_SIZE windows from the spatial volume for Mode B playback.
+  const canPlay = hasFrames || hasSpatialScrub;
+
   useEffect(() => {
-    if (!hasFrames || !playing) return;
+    if (!canPlay || !playing) return;
     playingRef.current = true;
     currentFrameRef.current = currentFrame;
     const intervalMs = 1000 / playSpeed;
@@ -1093,6 +1151,10 @@ export function VolumeViewer({
     let frameCounter = 0;
     let lastFrameTime = 0;
     let rafId: number;
+
+    const maxFrame = hasFrames
+      ? (framesRef.current?.length ?? 1) - 1
+      : spatialFrameCount - 1;
 
     const tick = (timestamp: number) => {
       if (!playingRef.current) return;
@@ -1102,11 +1164,8 @@ export function VolumeViewer({
       if (timestamp - lastFrameTime < intervalMs) { rafId = requestAnimationFrame(tick); return; }
       lastFrameTime = timestamp;
 
-      const frms = framesRef.current;
-      if (!frms || frms.length === 0) { rafId = requestAnimationFrame(tick); return; }
-
       const next = currentFrameRef.current + 1;
-      if (next >= frms.length) {
+      if (next >= maxFrame) {
         setCurrentFrame(currentFrameRef.current);
         setPlaying(false);
         return;
@@ -1115,33 +1174,44 @@ export function VolumeViewer({
       frameCounter++;
 
       try {
-        // Mode B: always upload (fast — pooled buffer + FAST PATH GPU upload)
-        if (rendererBRef.current) {
-          const volB = buildWindowVolumePooled(frms, next, WINDOW_SIZE);
-          rendererBRef.current.uploadVolume(volB.normalized, volB.dimensions, volB.extent);
-        }
+        if (hasFrames) {
+          const frms = framesRef.current;
+          if (!frms || frms.length === 0) { rafId = requestAnimationFrame(tick); return; }
 
-        // Mode C: only update every Nth frame (projectFrameWindow is heavy)
-        const bm = beamRef.current;
-        const gd = gridRef.current;
-        if (rendererCRef.current && bm && gd && frameCounter % MODE_C_EVERY === 0) {
-          const cacheC = frameCacheCRef.current;
-          const cachedC = cacheC.get(next);
-          if (cachedC) {
-            rendererCRef.current.uploadVolume(cachedC.normalized, cachedC.dimensions, cachedC.extent);
-          } else {
-            const volC = projectFrameWindow(frms, next, WINDOW_SIZE, bm, gd);
-            cacheC.set(next, volC);
-            rendererCRef.current.uploadVolume(volC.normalized, volC.dimensions, volC.extent);
+          // Mode B: always upload (fast — pooled buffer + FAST PATH GPU upload)
+          if (rendererBRef.current) {
+            const volB = buildWindowVolumePooled(frms, next, WINDOW_SIZE);
+            rendererBRef.current.uploadVolume(volB.normalized, volB.dimensions, volB.extent);
           }
+
+          // Mode C: only update every Nth frame (projectFrameWindow is heavy)
+          const bm = beamRef.current;
+          const gd = gridRef.current;
+          if (rendererCRef.current && bm && gd && frameCounter % MODE_C_EVERY === 0) {
+            const cacheC = frameCacheCRef.current;
+            const cachedC = cacheC.get(next);
+            if (cachedC) {
+              rendererCRef.current.uploadVolume(cachedC.normalized, cachedC.dimensions, cachedC.extent);
+            } else {
+              const volC = projectFrameWindow(frms, next, WINDOW_SIZE, bm, gd);
+              cacheC.set(next, volC);
+              rendererCRef.current.uploadVolume(volC.normalized, volC.dimensions, volC.extent);
+            }
+          }
+        } else if (hasSpatialScrub && spatialData && spatialScrubDims) {
+          // Spatial scrub: extract window from spatial volume for Mode B
+          if (rendererBRef.current) {
+            const win = extractSpatialWindow(spatialData, spatialScrubDims, next, WINDOW_SIZE);
+            rendererBRef.current.uploadVolume(win.data, win.dimensions, win.extent);
+          }
+          // Mode C stays static (no dynamic cone projection without real frames)
         }
       } catch (err) {
         console.error('[VolumeViewer] Playback upload error:', err);
       }
 
-      // Throttle React state sync to ~15fps — avoids re-rendering
-      // the entire 1900-line component at 60fps during playback.
-      if (frameCounter % 4 === 0 || next >= frms.length - 1) {
+      // Throttle React state sync to ~15fps
+      if (frameCounter % 4 === 0 || next >= maxFrame - 1) {
         setCurrentFrame(next);
       }
 
@@ -1154,7 +1224,7 @@ export function VolumeViewer({
       cancelAnimationFrame(rafId);
       setCurrentFrame(currentFrameRef.current);
     };
-  }, [playing, playSpeed, hasFrames, buildWindowVolumePooled]);
+  }, [playing, playSpeed, hasFrames, canPlay, hasSpatialScrub, spatialData, spatialScrubDims, spatialFrameCount, buildWindowVolumePooled]);
 
   // Settings update — per-mode
   const updateSetting = useCallback(
@@ -1204,7 +1274,7 @@ export function VolumeViewer({
   }, []);
 
   const chromaticModes = getChromaticModes();
-  const totalFrames = frames?.length ?? 0;
+  const totalFrames = hasFrames ? (frames?.length ?? 0) : spatialFrameCount;
   const currentTimeS = hasFrames && frames!.length > 0 ? frames![currentFrame]?.timeS ?? 0 : 0;
 
   const showB = hasFrames || hasSpatialData;
@@ -1306,8 +1376,8 @@ export function VolumeViewer({
                 {/* Invisible spacer — matches play button + gap height for equal section spacing */}
                 <div style={{ height: `${sliderPlayGap + 56}px` }} />
               </>
-            ) : isTemporal && hasFrames ? (
-              /* Temporal modes WITH frames: frame slider + play button */
+            ) : (hasFrames || (mode === 'spatial' && hasSpatialScrub)) ? (
+              /* Temporal slider + play: frames OR spatial scrub */
               <>
                 <div style={{
                   width: 'max(280px, 44%)',
@@ -1368,7 +1438,7 @@ export function VolumeViewer({
                 </button>
               </>
             ) : (
-              /* Static pre-computed volumes (no frames): spacer only */
+              /* Static pre-computed volume (Mode C without frames): spacer only */
               <div style={{ height: `${sliderPlayGap + 56}px` }} />
             )}
           </div>
@@ -1660,8 +1730,8 @@ export function VolumeViewer({
           }}
         />
 
-        {/* Slider + play controls — only show when functional */}
-        {(mode === 'instrument' || (isTemporal && hasFrames)) && (
+        {/* Slider + play controls — show when functional (frames, spatial scrub, or instrument) */}
+        {(mode === 'instrument' || hasFrames || (mode === 'spatial' && hasSpatialScrub)) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <div style={{ flex: 1, padding: '6px 12px', background: colors.surface, borderRadius: '16px', border: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center' }}>
               <input
@@ -1677,7 +1747,7 @@ export function VolumeViewer({
                 style={{ flex: 1, accentColor: colors.accent, cursor: 'pointer', height: '4px' }}
               />
             </div>
-            {isTemporal && hasFrames && (
+            {(hasFrames || (mode === 'spatial' && hasSpatialScrub)) && (
               <button
                 onClick={() => { if (currentFrame >= totalFrames - 1) { currentFrameRef.current = 0; setCurrentFrame(0); } setPlaying((p) => !p); }}
                 style={{ width: '40px', height: '40px', borderRadius: '50%', border: `1.5px solid ${colors.accent}`, background: playing ? colors.accentMuted : colors.surface, color: colors.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
