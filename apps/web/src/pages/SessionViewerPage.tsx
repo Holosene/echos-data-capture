@@ -151,6 +151,46 @@ export default function SessionViewerPage() {
     }
   }, [entry, loadState, loadVolumes]);
 
+  // ─── Reconstruct PreprocessedFrame[] from spatial volume ──────────────
+  // This is THE key to matching the ScanPage: with real frames, VolumeViewer
+  // uses the exact same buildWindowVolume, projectFrameWindow, and
+  // buildSliceVolumeFromFrames code paths as the scan page.
+  const reconstructedFrames = useMemo<PreprocessedFrame[] | undefined>(() => {
+    if (!spatialData || spatialData.length === 0) return undefined;
+    const [dimX, dimY, dimZ] = spatialDims;
+    if (dimX === 0 || dimY === 0 || dimZ === 0) return undefined;
+
+    const totalDuration = session?.durationS ?? entry?.durationS ?? 0;
+    const frames: PreprocessedFrame[] = [];
+
+    for (let y = 0; y < dimY; y++) {
+      const intensity = new Float32Array(dimX * dimZ);
+      for (let z = 0; z < dimZ; z++) {
+        const srcOffset = z * dimY * dimX + y * dimX;
+        const dstOffset = z * dimX;
+        intensity.set(spatialData.subarray(srcOffset, srcOffset + dimX), dstOffset);
+      }
+      frames.push({
+        index: y,
+        timeS: dimY > 1 ? (y / (dimY - 1)) * totalDuration : 0,
+        intensity,
+        width: dimX,
+        height: dimZ,
+      });
+    }
+
+    return frames;
+  }, [spatialData, spatialDims, session, entry]);
+
+  // Build GPX track object for viewer
+  const gpxTrackObj = (gpxTrackPoints && gpxTrackPoints.length > 0 && session)
+    ? {
+        points: gpxTrackPoints,
+        totalDistanceM: session.totalDistanceM,
+        durationS: session.durationS,
+      }
+    : undefined;
+
   // Session not found
   if (!sessionId || (!entry && state.manifestLoaded)) {
     return (
@@ -224,46 +264,6 @@ export default function SessionViewerPage() {
       </div>
     );
   }
-
-  // ─── Reconstruct PreprocessedFrame[] from spatial volume ──────────────
-  // This is THE key to matching the ScanPage: with real frames, VolumeViewer
-  // uses the exact same buildWindowVolume, projectFrameWindow, and
-  // buildSliceVolumeFromFrames code paths as the scan page.
-  const reconstructedFrames = useMemo<PreprocessedFrame[] | undefined>(() => {
-    if (!spatialData || spatialData.length === 0) return undefined;
-    const [dimX, dimY, dimZ] = spatialDims;
-    if (dimX === 0 || dimY === 0 || dimZ === 0) return undefined;
-
-    const totalDuration = session?.durationS ?? entry?.durationS ?? 0;
-    const frames: PreprocessedFrame[] = [];
-
-    for (let y = 0; y < dimY; y++) {
-      const intensity = new Float32Array(dimX * dimZ);
-      for (let z = 0; z < dimZ; z++) {
-        const srcOffset = z * dimY * dimX + y * dimX;
-        const dstOffset = z * dimX;
-        intensity.set(spatialData.subarray(srcOffset, srcOffset + dimX), dstOffset);
-      }
-      frames.push({
-        index: y,
-        timeS: dimY > 1 ? (y / (dimY - 1)) * totalDuration : 0,
-        intensity,
-        width: dimX,
-        height: dimZ,
-      });
-    }
-
-    return frames;
-  }, [spatialData, spatialDims, session, entry]);
-
-  // Build GPX track object for viewer
-  const gpxTrackObj = gpxTrackPoints && gpxTrackPoints.length > 0 && session
-    ? {
-        points: gpxTrackPoints,
-        totalDistanceM: session.totalDistanceM,
-        durationS: session.durationS,
-      }
-    : undefined;
 
   // Ready — render exactly like ScanPage viewer phase
   return (
