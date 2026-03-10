@@ -18,7 +18,7 @@ import type {
   CropRect,
   SessionManifestEntry,
 } from '@echos/core';
-import { serializeVolume } from '@echos/core';
+import { serializeVolume, projectFrameWindow } from '@echos/core';
 import { saveSession, saveVolume, findDuplicate } from './session-db.js';
 
 // ─── Build spatial (stacked-frame) volume for Mode B + orthogonal slices ────
@@ -216,11 +216,17 @@ export async function publishToRepo(): Promise<void> {
   const r = state.result;
   if (!r) throw new Error('No pipeline result to publish');
 
-  // Build spatial volume from frames, downsampled to max 128 per axis (~8 MB)
+  // Build spatial volume from frames, downsampled to max 256 per axis (~16 MB)
+  // Higher resolution than 128 gives better orthogonal slices on session page
   const spatialRaw = buildSpatialVolumeFromFrames(r.instrumentFrames);
   const spatialVol = spatialRaw
-    ? downsampleVolume(spatialRaw.data, spatialRaw.dimensions, spatialRaw.extent, 128)
+    ? downsampleVolume(spatialRaw.data, spatialRaw.dimensions, spatialRaw.extent, 256)
     : null;
+
+  // Build classic cone-projected volume snapshot at middle frame (for Mode C on session page)
+  const WINDOW_SIZE = 12;
+  const midFrame = Math.floor(r.instrumentFrames.length / 2);
+  const classicVol = projectFrameWindow(r.instrumentFrames, midFrame, WINDOW_SIZE, r.beam, r.grid);
 
   const manifest: SessionManifestEntry = {
     id: r.sessionId,
@@ -239,6 +245,7 @@ export async function publishToRepo(): Promise<void> {
       gpx: r.gpxFileName || undefined,
       volumeInstrument: 'volume-instrument.echos-vol',
       ...(spatialVol ? { volumeSpatial: 'volume-spatial.echos-vol' } : {}),
+      volumeClassic: 'volume-classic.echos-vol',
     },
   };
 
@@ -253,22 +260,34 @@ export async function publishToRepo(): Promise<void> {
     ? serializeVolume({ data: spatialVol.data, dimensions: spatialVol.dimensions, extent: spatialVol.extent })
     : null;
 
-  // Build wire protocol: [headerLen:u32] [headerJSON] [instrumentBytes] [spatialBytes?]
+  const classicBuffer = serializeVolume({
+    data: classicVol.normalized,
+    dimensions: classicVol.dimensions,
+    extent: classicVol.extent,
+  });
+
+  // Build wire protocol: [headerLen:u32] [headerJSON] [instrumentBytes] [spatialBytes?] [classicBytes]
   const header = JSON.stringify({
     manifest,
     volumeSize: volumeBuffer.byteLength,
     spatialVolumeSize: spatialBuffer ? spatialBuffer.byteLength : 0,
+    classicVolumeSize: classicBuffer.byteLength,
     gpxText: r.gpxText || null,
   });
   const headerBytes = new TextEncoder().encode(header);
-  const totalSize = 4 + headerBytes.length + volumeBuffer.byteLength + (spatialBuffer ? spatialBuffer.byteLength : 0);
+  const totalSize = 4 + headerBytes.length + volumeBuffer.byteLength
+    + (spatialBuffer ? spatialBuffer.byteLength : 0)
+    + classicBuffer.byteLength;
   const payload = new Uint8Array(totalSize);
   new DataView(payload.buffer).setUint32(0, headerBytes.length, true);
   payload.set(headerBytes, 4);
   payload.set(new Uint8Array(volumeBuffer), 4 + headerBytes.length);
+  let offset = 4 + headerBytes.length + volumeBuffer.byteLength;
   if (spatialBuffer) {
-    payload.set(new Uint8Array(spatialBuffer), 4 + headerBytes.length + volumeBuffer.byteLength);
+    payload.set(new Uint8Array(spatialBuffer), offset);
+    offset += spatialBuffer.byteLength;
   }
+  payload.set(new Uint8Array(classicBuffer), offset);
 
   const resp = await fetch('/api/publish-session', {
     method: 'POST',
@@ -524,10 +543,10 @@ export async function runPipeline(opts: {
         extent,
       });
 
-      // Build and save spatial volume (stacked frames, downsampled to 128³ max)
+      // Build and save spatial volume (stacked frames, downsampled to 256 max for better slices)
       const spatialRaw = buildSpatialVolumeFromFrames(preprocessedFrames);
       const spatialVol = spatialRaw
-        ? downsampleVolume(spatialRaw.data, spatialRaw.dimensions, spatialRaw.extent, 128)
+        ? downsampleVolume(spatialRaw.data, spatialRaw.dimensions, spatialRaw.extent, 256)
         : null;
       if (spatialVol) {
         await saveVolume(sessionId, 'spatial', {
@@ -537,6 +556,16 @@ export async function runPipeline(opts: {
         });
         manifest.files.volumeSpatial = 'volume-spatial.echos-vol';
       }
+
+      // Build and save classic cone-projected volume snapshot at middle frame
+      const midFrame = Math.floor(preprocessedFrames.length / 2);
+      const classicRaw = projectFrameWindow(preprocessedFrames, midFrame, 12, beam, grid);
+      await saveVolume(sessionId, 'classic', {
+        data: classicRaw.normalized,
+        dimensions: classicRaw.dimensions,
+        extent: classicRaw.extent,
+      });
+      manifest.files.volumeClassic = 'volume-classic.echos-vol';
 
       await saveSession({
         id: sessionId,

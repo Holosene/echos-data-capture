@@ -39,6 +39,10 @@ interface VolumeViewerProps {
   spatialData?: Float32Array | null;
   spatialDimensions?: [number, number, number];
   spatialExtent?: [number, number, number];
+  /** Pre-computed classic (cone-projected) volume for Mode C (pre-generated sessions) */
+  classicData?: Float32Array | null;
+  classicDimensions?: [number, number, number];
+  classicExtent?: [number, number, number];
   /** Preprocessed frames for Mode C + slices */
   frames?: PreprocessedFrame[];
   beam?: BeamSettings;
@@ -365,6 +369,9 @@ export function VolumeViewer({
   spatialData,
   spatialDimensions,
   spatialExtent,
+  classicData,
+  classicDimensions,
+  classicExtent,
   frames,
   beam,
   grid,
@@ -738,6 +745,7 @@ export function VolumeViewer({
   const hasFrames = !!(frames && frames.length > 0);
   const hasSpatialData = !!(spatialData && spatialData.length > 0);
   const hasVolumeData = !!(volumeData && volumeData.length > 0);
+  const hasClassicData = !!(classicData && classicData.length > 0);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(20);
@@ -795,7 +803,7 @@ export function VolumeViewer({
       }
 
       // Mode C — VolumeRendererClassic + DEFAULT_CALIBRATION_C
-      if (containerCRef.current && !rendererCRef.current && (hasFrames || hasVolumeData)) {
+      if (containerCRef.current && !rendererCRef.current && (hasFrames || hasClassicData || hasVolumeData)) {
         rendererCRef.current = new VolumeRendererClassic(
           containerCRef.current, modeSettings.classic, { ...DEFAULT_CALIBRATION_C, bgColor },
         );
@@ -822,7 +830,7 @@ export function VolumeViewer({
       frameCacheCRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasFrames, hasSpatialData, hasVolumeData]);
+  }, [hasFrames, hasSpatialData, hasVolumeData, hasClassicData]);
 
   // Initialize presentation poses after renderers are created
   useEffect(() => {
@@ -878,14 +886,19 @@ export function VolumeViewer({
   }, [spatialData, spatialDimensions, spatialExtent, dimensions, extent, hasFrames]);
 
   // Upload pre-computed volume data to Mode C (for pre-generated sessions without frames)
+  // Prefer classicData (proper cone projection) over volumeData (instrument volume)
   useEffect(() => {
-    if (!rendererCRef.current || !volumeData || volumeData.length === 0 || hasFrames) return;
+    if (!rendererCRef.current || hasFrames) return;
+    const cData = hasClassicData ? classicData! : volumeData;
+    const cDims = hasClassicData ? (classicDimensions ?? dimensions) : dimensions;
+    const cExt = hasClassicData ? (classicExtent ?? extent) : extent;
+    if (!cData || cData.length === 0) return;
     try {
-      rendererCRef.current.uploadVolume(volumeData, dimensions, extent);
+      rendererCRef.current.uploadVolume(cData, cDims, cExt);
     } catch (err) {
       console.error('[VolumeViewer] Mode C upload error:', err);
     }
-  }, [volumeData, dimensions, extent, hasFrames]);
+  }, [classicData, classicDimensions, classicExtent, volumeData, dimensions, extent, hasFrames, hasClassicData]);
 
   // ─── Mode B + C: frame caches (LRU-bounded) ────────────────────────────
   const MAX_CACHE_ENTRIES = 20;
@@ -1050,7 +1063,9 @@ export function VolumeViewer({
     uploadFrameToRenderers(currentFrame);
   }, [currentFrame, hasFrames, playing, uploadFrameToRenderers]);
 
-  // Slice data — prefer frame-stacked volume, then spatialData, then instrument volumeData
+  // Slice data — prefer frame-stacked volume, then spatialData (highest res stacked frames), then instrument
+  // spatialData is the downsampled frame-stack (same structure as fullSliceVolume, just lower res)
+  // so it gives the most accurate slices for pre-generated sessions
   useEffect(() => {
     if (fullSliceVolume) {
       setSliceVolumeData(fullSliceVolume.data);
@@ -1193,7 +1208,7 @@ export function VolumeViewer({
   const currentTimeS = hasFrames && frames!.length > 0 ? frames![currentFrame]?.timeS ?? 0 : 0;
 
   const showB = hasFrames || hasSpatialData;
-  const showC = (hasFrames || hasVolumeData) && !!beam && !!grid;
+  const showC = (hasFrames || hasClassicData || hasVolumeData) && !!beam && !!grid;
 
   // Background matches the renderer scene background for seamless 3D
   const viewportBg = theme === 'light' ? '#f5f5f7' : '#111111';

@@ -41,6 +41,9 @@ export default function SessionViewerPage() {
   const [spatialData, setSpatialData] = useState<Float32Array | null>(null);
   const [spatialDims, setSpatialDims] = useState<[number, number, number]>([1, 1, 1]);
   const [spatialExtent, setSpatialExtent] = useState<[number, number, number]>([1, 1, 1]);
+  const [classicData, setClassicData] = useState<Float32Array | null>(null);
+  const [classicDims, setClassicDims] = useState<[number, number, number]>([1, 1, 1]);
+  const [classicExtent, setClassicExtent] = useState<[number, number, number]>([1, 1, 1]);
 
   // Find manifest entry
   const entry = state.manifestEntries.find((e) => e.id === sessionId);
@@ -75,6 +78,13 @@ export default function SessionViewerPage() {
             setSpatialDims(snapS.dimensions);
             setSpatialExtent(snapS.extent);
           }
+          const idbClassic = await loadVolumeFromIDB(sessionId, 'classic');
+          if (idbClassic) {
+            const snapCl = deserializeVolume(idbClassic);
+            setClassicData(snapCl.data);
+            setClassicDims(snapCl.dimensions);
+            setClassicExtent(snapCl.extent);
+          }
           setProgress(100);
           setLoadState('ready');
           return;
@@ -107,7 +117,20 @@ export default function SessionViewerPage() {
               setSpatialData(snap.data);
               setSpatialDims(snap.dimensions);
               setSpatialExtent(snap.extent);
-              setProgress((p) => Math.min(p + 50, 100));
+              setProgress((p) => Math.min(p + 30, 100));
+            }),
+        );
+      }
+
+      if (entry.files.volumeClassic) {
+        fetches.push(
+          fetchSessionVolume(basePath, sessionId, entry.files.volumeClassic)
+            .then((buffer: ArrayBuffer) => {
+              const snap = deserializeVolume(buffer);
+              setClassicData(snap.data);
+              setClassicDims(snap.dimensions);
+              setClassicExtent(snap.extent);
+              setProgress((p) => Math.min(p + 20, 100));
             }),
         );
       }
@@ -264,6 +287,9 @@ export default function SessionViewerPage() {
           spatialData={spatialData}
           spatialDimensions={spatialDims}
           spatialExtent={spatialExtent}
+          classicData={classicData}
+          classicDimensions={classicDims}
+          classicExtent={classicExtent}
           gpxTrack={gpxTrackObj}
           videoFileName={entry?.videoFileName ?? entry?.name}
           gpxFileName={entry?.gpxFileName}

@@ -43,7 +43,7 @@ export function publishSessionPlugin(): Plugin {
             const headerJson = body.subarray(4, 4 + headerLen).toString('utf-8');
             const header = JSON.parse(headerJson);
 
-            const { manifest, volumeSize, spatialVolumeSize, gpxText } = header;
+            const { manifest, volumeSize, spatialVolumeSize, classicVolumeSize, gpxText } = header;
             const sessionId = manifest.id;
 
             // Extract volume binaries
@@ -53,6 +53,11 @@ export function publishSessionPlugin(): Plugin {
             const spatialStart = volStart + volumeSize;
             const spatialBuffer = spatialVolumeSize > 0
               ? body.subarray(spatialStart, spatialStart + spatialVolumeSize)
+              : null;
+
+            const classicStart = spatialStart + (spatialVolumeSize || 0);
+            const classicBuffer = (classicVolumeSize ?? 0) > 0
+              ? body.subarray(classicStart, classicStart + classicVolumeSize)
               : null;
 
             // Create session directory
@@ -74,6 +79,14 @@ export function publishSessionPlugin(): Plugin {
               writeFileSync(
                 join(sessionDir, manifest.files.volumeSpatial),
                 spatialBuffer,
+              );
+            }
+
+            // Write classic cone-projected volume binary
+            if (classicBuffer && manifest.files.volumeClassic) {
+              writeFileSync(
+                join(sessionDir, manifest.files.volumeClassic),
+                classicBuffer,
               );
             }
 

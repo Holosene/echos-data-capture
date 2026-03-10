@@ -34,6 +34,7 @@ export interface SessionManifestEntry {
     gpx: string;
     volumeInstrument?: string;
     volumeSpatial?: string;
+    volumeClassic?: string;
     thumbnail?: string;
   };
 }
