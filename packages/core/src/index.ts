@@ -108,7 +108,7 @@ export { computeAutoThreshold, computeVolumeStats } from './adaptive-threshold.j
 
 // ─── Volume Snapshot (.echos-vol) ───────────────────────────────────────────
 
-export { serializeVolume, deserializeVolume, volumeSnapshotToBlob } from './volume-snapshot.js';
+export { serializeVolume, serializeVolumeV1, deserializeVolume, volumeSnapshotToBlob } from './volume-snapshot.js';
 export type { VolumeSnapshot } from './volume-snapshot.js';
 
 // ─── Session Manifest ──────────────────────────────────────────────────────
