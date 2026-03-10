@@ -151,10 +151,11 @@ export default function SessionViewerPage() {
     }
   }, [entry, loadState, loadVolumes]);
 
-  // ─── Reconstruct PreprocessedFrame[] from spatial volume ──────────────
-  // This is THE key to matching the ScanPage: with real frames, VolumeViewer
-  // uses the exact same buildWindowVolume, projectFrameWindow, and
-  // buildSliceVolumeFromFrames code paths as the scan page.
+  // Reconstruct PreprocessedFrame[] from the un-downsampled spatial volume.
+  // The spatial volume is a direct frame-stack (buildSpatialVolumeFromFrames),
+  // so slicing along Y gives back the exact original frames.
+  // This lets VolumeViewer use the same code paths as the scan page
+  // (buildWindowVolume for Mode B, projectFrameWindow for Mode C).
   const reconstructedFrames = useMemo<PreprocessedFrame[] | undefined>(() => {
     if (!spatialData || spatialData.length === 0) return undefined;
     const [dimX, dimY, dimZ] = spatialDims;
