@@ -8,14 +8,14 @@
  * Route: /session/:sessionId
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GlassPanel, Button, ProgressBar, colors, fonts } from '@echos/ui';
 import {
   deserializeVolume,
   fetchSessionVolume,
 } from '@echos/core';
-import type { SessionManifestEntry, VolumeSnapshot } from '@echos/core';
+import type { SessionManifestEntry, VolumeSnapshot, PreprocessedFrame } from '@echos/core';
 import { useAppState } from '../store/app-state.js';
 import { useTranslation } from '../i18n/index.js';
 import { VolumeViewer } from '../components/VolumeViewer.js';
@@ -225,6 +225,37 @@ export default function SessionViewerPage() {
     );
   }
 
+  // ─── Reconstruct PreprocessedFrame[] from spatial volume ──────────────
+  // This is THE key to matching the ScanPage: with real frames, VolumeViewer
+  // uses the exact same buildWindowVolume, projectFrameWindow, and
+  // buildSliceVolumeFromFrames code paths as the scan page.
+  const reconstructedFrames = useMemo<PreprocessedFrame[] | undefined>(() => {
+    if (!spatialData || spatialData.length === 0) return undefined;
+    const [dimX, dimY, dimZ] = spatialDims;
+    if (dimX === 0 || dimY === 0 || dimZ === 0) return undefined;
+
+    const totalDuration = session?.durationS ?? entry?.durationS ?? 0;
+    const frames: PreprocessedFrame[] = [];
+
+    for (let y = 0; y < dimY; y++) {
+      const intensity = new Float32Array(dimX * dimZ);
+      for (let z = 0; z < dimZ; z++) {
+        const srcOffset = z * dimY * dimX + y * dimX;
+        const dstOffset = z * dimX;
+        intensity.set(spatialData.subarray(srcOffset, srcOffset + dimX), dstOffset);
+      }
+      frames.push({
+        index: y,
+        timeS: dimY > 1 ? (y / (dimY - 1)) * totalDuration : 0,
+        intensity,
+        width: dimX,
+        height: dimZ,
+      });
+    }
+
+    return frames;
+  }, [spatialData, spatialDims, session, entry]);
+
   // Build GPX track object for viewer
   const gpxTrackObj = gpxTrackPoints && gpxTrackPoints.length > 0 && session
     ? {
@@ -284,17 +315,12 @@ export default function SessionViewerPage() {
           volumeData={instrumentData}
           dimensions={instrumentDims}
           extent={instrumentExtent}
-          spatialData={spatialData}
-          spatialDimensions={spatialDims}
-          spatialExtent={spatialExtent}
-          classicData={classicData}
-          classicDimensions={classicDims}
-          classicExtent={classicExtent}
+          frames={reconstructedFrames}
+          beam={entry?.beam}
+          grid={entry ? { resX: entry.gridDimensions[0], resY: entry.gridDimensions[1], resZ: entry.gridDimensions[2] } : undefined}
           gpxTrack={gpxTrackObj}
           videoFileName={entry?.videoFileName ?? entry?.name}
           gpxFileName={entry?.gpxFileName}
-          beam={entry?.beam}
-          grid={entry ? { resX: entry.gridDimensions[0], resY: entry.gridDimensions[1], resZ: entry.gridDimensions[2] } : undefined}
           videoDurationS={session ? session.durationS : undefined}
           onNewScan={() => navigate('/scan')}
           onClose={() => navigate('/')}
