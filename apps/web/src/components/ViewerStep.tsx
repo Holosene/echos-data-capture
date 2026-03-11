@@ -69,6 +69,7 @@ function renderSlice(
   axis: 'x' | 'y' | 'z',
   sliceIndex: number,
   preset: PresetName,
+  heightScale = 1,
 ) {
   const { data, metadata } = volume;
   const [dimX, dimY, dimZ] = metadata.dimensions;
@@ -80,12 +81,14 @@ function renderSlice(
   else if (axis === 'y') { w = dimX; h = dimZ; }
   else { w = dimY; h = dimZ; }
 
+  const displayH = Math.round(h * heightScale);
   canvas.width = w;
-  canvas.height = h;
-  const imageData = ctx.createImageData(w, h);
+  canvas.height = displayH;
+  const imageData = ctx.createImageData(w, displayH);
   const colorMap = PRESETS[preset].colorMap;
 
-  for (let row = 0; row < h; row++) {
+  for (let displayRow = 0; displayRow < displayH; displayRow++) {
+    const row = Math.min(Math.floor(displayRow / heightScale), h - 1);
     for (let col = 0; col < w; col++) {
       let val: number;
       if (axis === 'z') val = data[sliceIndex * dimY * dimX + row * dimX + col];
@@ -106,7 +109,7 @@ function renderSlice(
         }
       }
 
-      const idx = (row * w + col) * 4;
+      const idx = (displayRow * w + col) * 4;
       imageData.data[idx] = r;
       imageData.data[idx + 1] = g;
       imageData.data[idx + 2] = b;
@@ -122,11 +125,13 @@ function SliceView({
   axis,
   label,
   preset,
+  heightScale = 1,
 }: {
   volume: Volume;
   axis: 'x' | 'y' | 'z';
   label: string;
   preset: PresetName;
+  heightScale?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dimX, dimY, dimZ] = volume.metadata.dimensions;
@@ -135,9 +140,9 @@ function SliceView({
 
   useEffect(() => {
     if (canvasRef.current) {
-      renderSlice(canvasRef.current, volume, axis, sliceIdx, preset);
+      renderSlice(canvasRef.current, volume, axis, sliceIdx, preset, heightScale);
     }
-  }, [volume, axis, sliceIdx, preset]);
+  }, [volume, axis, sliceIdx, preset, heightScale]);
 
   const axisLabels = {
     x: { h: 'Distance (Y)', v: 'Depth (Z)' },
@@ -298,7 +303,7 @@ export function ViewerStep() {
         <SliceView volume={volume} axis="y" label={t('viewer.crossSection')} preset={preset} />
         <SliceView volume={volume} axis="z" label={t('viewer.planView')} preset={preset} />
       </div>
-      <SliceView volume={volume} axis="x" label={t('viewer.longitudinal')} preset={preset} />
+      <SliceView volume={volume} axis="x" label={t('viewer.longitudinal')} preset={preset} heightScale={2} />
 
       {qcReport && qcReport.warnings.length > 0 && (
         <GlassPanel padding="16px" style={{ borderColor: colors.warning }}>
