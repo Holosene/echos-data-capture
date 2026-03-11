@@ -355,7 +355,6 @@ export const SlicePanel = forwardRef<SlicePanelHandle, SlicePanelProps>(function
         axis="x"
         label={t('v2.slices.longitudinal')}
         preset={preset}
-        canvasScale={2}
         canvasRefOut={longitudinalCanvasRef}
       />
     </div>
