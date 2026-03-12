@@ -5,7 +5,7 @@ import { useTranslation } from '../i18n/index.js';
 
 export function ManifestoPage() {
   const navigate = useNavigate();
-  const { t, tArray } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <div style={{ background: colors.black, padding: 'clamp(40px, 5vw, 80px) var(--content-gutter)' }}>
@@ -91,14 +91,9 @@ export function ManifestoPage() {
             <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px', color: colors.text1 }}>
               {t('manifesto.s4.title')}
             </h2>
-            <ul style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px', listStyle: 'none', padding: 0, display: 'grid', gap: '8px' }}>
-              {tArray('manifesto.s4.items').map((item, i) => (
-                <li key={i} style={{ display: 'flex', gap: '12px' }}>
-                  <span style={{ color: colors.accent, flexShrink: 0 }}>-</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px' }}>
+              {t('manifesto.s4.p1')}
+            </p>
           </GlassPanel>
 
           {/* Row 3, full width */}
@@ -106,14 +101,9 @@ export function ManifestoPage() {
             <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px', color: colors.text1 }}>
               {t('manifesto.s5.title')}
             </h2>
-            <ul className="roadmap-list" style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px', listStyle: 'none', padding: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 32px' }}>
-              {tArray('manifesto.s5.items').map((item, i) => (
-                <li key={i} style={{ display: 'flex', gap: '12px' }}>
-                  <span style={{ color: colors.accent, flexShrink: 0 }}>+</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
+            <p style={{ color: colors.text2, lineHeight: '1.8', fontSize: '16px' }}>
+              {t('manifesto.s5.p1')}
+            </p>
           </GlassPanel>
         </div>
 
