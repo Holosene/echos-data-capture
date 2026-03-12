@@ -228,12 +228,14 @@ function SliceView({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        maxHeight: isPortrait ? '500px' : '300px',
         minHeight: '120px',
       }}>
         <canvas
           ref={canvasRef}
           style={{
             maxWidth: '100%',
+            maxHeight: isPortrait ? '500px' : '300px',
             imageRendering: 'pixelated',
             objectFit: 'contain',
             display: 'block',
@@ -340,15 +342,26 @@ export const SlicePanel = forwardRef<SlicePanelHandle, SlicePanelProps>(function
         ))}
       </div>
 
-      {/* All slices full-width for consistent layout regardless of data dimensions */}
-      <SliceView
-        volumeData={volumeData}
-        dimensions={dimensions}
-        axis="y"
-        label={t('v2.slices.crossSection')}
-        preset={preset}
-        canvasRefOut={crossSectionCanvasRef}
-      />
+      {/* 2-column layout: cross-section + plan */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <SliceView
+          volumeData={volumeData}
+          dimensions={dimensions}
+          axis="y"
+          label={t('v2.slices.crossSection')}
+          preset={preset}
+          canvasRefOut={crossSectionCanvasRef}
+        />
+        <SliceView
+          volumeData={volumeData}
+          dimensions={dimensions}
+          axis="z"
+          label={t('v2.slices.planView')}
+          preset={preset}
+        />
+      </div>
+
+      {/* Full-width: longitudinal */}
       <SliceView
         volumeData={volumeData}
         dimensions={dimensions}
