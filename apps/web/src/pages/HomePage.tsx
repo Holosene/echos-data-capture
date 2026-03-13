@@ -277,49 +277,87 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Gallery container — CSS grid so gallery-03 and gallery-06 have identical widths */}
-        <div className="gallery-container" style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          gridTemplateRows: '280px 280px',
-          gap: '12px',
-        }}>
-          {allGalleryItems.map((item) => {
-            const isHovered = hoveredImage === item.name;
-            const origin = galleryHoverOrigin[item.name] || 'center center';
-            return (
-              <div
-                key={item.name}
-                className="gallery-card visual-placeholder"
-                data-baseflex={item.baseFlex}
-                style={{
-                  gridColumn: item.baseFlex === 2 ? 'span 2' : undefined,
-                  cursor: 'pointer',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  borderRadius: '12px',
-                  border: isHovered ? `2px solid ${colors.accent}` : '2px solid transparent',
-                  transformOrigin: origin,
-                  transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'transform 400ms ease, border-color 300ms ease',
-                  zIndex: isHovered ? 2 : 1,
-                }}
-                onClick={() => openLightbox(galleryImages, item.index)}
-                onMouseEnter={() => setHoveredImage(item.name)}
-                onMouseLeave={() => setHoveredImage(null)}
-              >
-                <ProgressiveImg
-                  name={item.name}
-                  alt=""
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-                <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
-                  <IconImage size={24} color={colors.text3} />
-                  <span style={{ fontSize: '11px' }}>{item.name}.png</span>
+        {/* Gallery container — flex rows with directional hover */}
+        <div className="gallery-container">
+          {/* Row 1: gallery-01 (wide) + gallery-03 */}
+          <div className="gallery-row" style={{ display: 'flex', gap: '12px', height: '300px', marginBottom: '12px' }}>
+            {galleryRow1.map((item) => {
+              const isHovered = hoveredImage === item.name;
+              const origin = galleryHoverOrigin[item.name] || 'center center';
+              return (
+                <div
+                  key={item.name}
+                  className="gallery-card visual-placeholder"
+                  data-baseflex={item.baseFlex}
+                  style={{
+                    flex: item.baseFlex,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '12px',
+                    border: isHovered ? `2px solid ${colors.accent}` : '2px solid transparent',
+                    transformOrigin: origin,
+                    transform: isHovered ? 'scale(1.06)' : 'scale(1)',
+                    transition: 'transform 400ms ease, border-color 300ms ease',
+                    zIndex: isHovered ? 2 : 1,
+                  }}
+                  onClick={() => openLightbox(galleryImages, item.index)}
+                  onMouseEnter={() => setHoveredImage(item.name)}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <ProgressiveImg
+                    name={item.name}
+                    alt=""
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
+                    <IconImage size={24} color={colors.text3} />
+                    <span style={{ fontSize: '11px' }}>{item.name}.png</span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {/* Row 2: gallery-04, gallery-05, gallery-06 */}
+          <div className="gallery-row" style={{ display: 'flex', gap: '12px', height: '260px' }}>
+            {galleryRow2.map((item) => {
+              const isHovered = hoveredImage === item.name;
+              const origin = galleryHoverOrigin[item.name] || 'center center';
+              return (
+                <div
+                  key={item.name}
+                  className="gallery-card visual-placeholder"
+                  data-baseflex={item.baseFlex}
+                  style={{
+                    flex: item.baseFlex,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '12px',
+                    border: isHovered ? `2px solid ${colors.accent}` : '2px solid transparent',
+                    transformOrigin: origin,
+                    transform: isHovered ? 'scale(1.06)' : 'scale(1)',
+                    transition: 'transform 400ms ease, border-color 300ms ease',
+                    zIndex: isHovered ? 2 : 1,
+                  }}
+                  onClick={() => openLightbox(galleryImages, item.index)}
+                  onMouseEnter={() => setHoveredImage(item.name)}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <ProgressiveImg
+                    name={item.name}
+                    alt=""
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
+                    <IconImage size={24} color={colors.text3} />
+                    <span style={{ fontSize: '11px' }}>{item.name}.png</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
